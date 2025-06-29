@@ -1,6 +1,6 @@
 import React from 'react';
 import { BookOpenCheck, CheckCircle, Clock } from 'lucide-react';
-import { getName } from "../../services/AuthService"
+import { getName } from "../../../services/AuthService"
 
 const HomeContent = ({ courses, assignments }) => {
     return (

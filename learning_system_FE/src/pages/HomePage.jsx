@@ -1,118 +1,32 @@
 import React, { useState } from 'react';
-import Sidebar from '../components/Sidebar';
-import TopBar from '../components/TopBar';
-// import các content component khác...
+import Sidebar from '../components/Common/Sidebar';
+import TopBar from '../components/Common/TopBar';
+import HomeContent from '../components/Student/HomeContent';
+import CoursesContent from '../components/Student/CoursesContent';
+import AssignmentContent from '../components/Student/AssignmentContent';
+import { profileData, courses, assignments, menuItems } from '../data/student/home';
 
 import {
     Home, BookOpen, FileText, MessageCircle, User, Settings,
-    X, Menu, CheckCircle, Clock, BookOpenCheck, Calendar, Award, Eye, Play, Search
+    X, Menu, CheckCircle, Clock, BookOpenCheck, Calendar, Award, Eye, Play, Search, Bell
 } from 'lucide-react';
-import HomeContent from '../components/HomeContent';
+import UserProfileContent from '../components/Student/UserProfileContent';
 
 const HomePage = () => {
-    // 1. State
     const [activeMenu, setActiveMenu] = useState('home');
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [profileData] = useState({
-        name: "Nguyễn Văn An",
-        email: "nguyenvanan@email.com",
-        phone: "0123456789",
-        studentId: "SV2023001",
-        birthDate: "1995-05-15",
-        address: "123 Đường ABC, Quận 1, TP.HCM",
-        avatar: null
-    });
-    // Thêm các state khác nếu cần
-    const [courses] = useState([
-        {
-            id: 1,
-            name: "Python cơ bản",
-            progress: 75,
-            color: "bg-blue-500",
-            instructor: "GV. Trần Văn A",
-            lessons: 24,
-            completedLessons: 18,
-            duration: "6 tuần",
-            description: "Học lập trình Python từ cơ bản đến nâng cao",
-            nextLesson: "Bài 19: Xử lý ngoại lệ",
-            lastAccessed: "2 giờ trước"
-        },
-        {
-            id: 2,
-            name: "Perl nâng cao",
-            progress: 45,
-            color: "bg-purple-500",
-            instructor: "GV. Lê Thị B",
-            lessons: 20,
-            completedLessons: 9,
-            duration: "4 tuần",
-            description: "Nắm vững các kỹ thuật lập trình Perl nâng cao",
-            nextLesson: "Bài 10: Biểu thức chính quy",
-            lastAccessed: "1 ngày trước"
-        }
-    ]);
-    const [assignments] = useState([
-        {
-            id: 1,
-            title: "Thuật toán sắp xếp",
-            course: "Python cơ bản",
-            dueDate: "2025-06-25",
-            status: "submitted",
-            score: 85,
-            maxScore: 100,
-            submittedAt: "2025-06-20 14:30",
-            feedback: "Bài làm tốt, cần cải thiện phần tối ưu thuật toán."
-        },
-        {
-            id: 2,
-            title: "Biểu thức chính quy",
-            course: "Perl nâng cao",
-            dueDate: "2025-06-28",
-            status: "grading",
-            submittedAt: "2025-06-22 16:45"
-        },
-        {
-            id: 3,
-            title: "Xử lý file và thư mục",
-            course: "Python cơ bản",
-            dueDate: "2025-06-30",
-            status: "pending",
-            description: "Viết chương trình xử lý file CSV và JSON"
-        },
-        {
-            id: 4,
-            title: "Module và Package",
-            course: "Python cơ bản",
-            dueDate: "2025-07-02",
-            status: "not_started"
-        }
-    ]);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    const menuItems = [
-        { id: 'home', label: 'Trang chủ', icon: Home },
-        { id: 'courses', label: 'Khóa học', icon: BookOpen },
-        { id: 'assignments', label: 'Bài tập', icon: FileText },
-        { id: 'chatbot', label: 'Chatbot AI', icon: MessageCircle },
-        { id: 'profile', label: 'Hồ sơ', icon: User },
-        { id: 'settings', label: 'Cài đặt', icon: Settings }
-    ];
-
-    // 2. Hàm xử lý logic
-    // ... (các hàm xử lý khác nếu có)
-
-    // 3. Hàm renderContent
+    // Hàm renderContent
     const renderContent = () => {
         switch (activeMenu) {
             case 'home':
                 return <HomeContent studentName={profileData.name} courses={courses} assignments={assignments} />;
             case 'courses':
-                return (
-                    <div>Khóa học (CoursesContent)</div>
-                );
+                return <CoursesContent />
             case 'assignments':
-                return (
-                    <div>Bài tập (AssignmentsContent)</div>
-                );
+                return <AssignmentContent />;
+            case 'profile':
+                return <UserProfileContent />
             default:
                 return (
                     <div className="text-center py-12">
@@ -127,29 +41,31 @@ const HomePage = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex">
             <Sidebar
-                menuItems={menuItems}
-                activeMenu={activeMenu}
-                setActiveMenu={setActiveMenu}
+                sidebarItems={menuItems}
+                activeTab={activeMenu}
+                setActiveTab={setActiveMenu}
                 sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
+                headerContent={null}
             />
             <div className="flex-1 lg:ml-0">
                 <TopBar
-                    activeMenu={activeMenu}
-                    menuItems={menuItems}
-                    setSidebarOpen={setSidebarOpen}
-                    studentName={profileData.name}
+                    title={activeMenu === 'home' ? 'DASHBOARD' : menuItems.find(item => item.id === activeMenu)?.label?.toUpperCase()}
+                    onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+                    userName={profileData.name}
+                    userEmail={profileData.email}
+                    avatar={profileData.avatar}
+                    rightContent={
+                        <button className="p-2 rounded-lg hover:bg-gray-100 relative">
+                            <Bell className="h-5 w-5 text-gray-600" />
+                            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                        </button>
+                    }
                 />
                 <div className="p-4 width-max">
                     {renderContent()}
                 </div>
             </div>
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+           
         </div>
     );
 };
