@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpenCheck, CheckCircle, Clock } from 'lucide-react';
 import { getName } from "../../../services/AuthService"
 
 const HomeContent = ({ courses, assignments }) => {
+    const [studentName, setStudentName] = useState('');
+
+    useEffect(() => {
+        const userInfo = getName();
+        if (userInfo && userInfo.fullName) {
+            setStudentName(userInfo.fullName);
+        }
+    }, []);
+
     return (
         <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg">
-                <h2 className="text-2xl font-bold mb-2">Xin chào, {getName()}!</h2>
+                <h2 className="text-2xl font-bold mb-2">Xin chào, {studentName}!</h2>
                 <p className="text-blue-100">Chào mừng bạn trở lại với hệ thống học tập</p>
             </div>
 

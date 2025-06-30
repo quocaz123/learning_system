@@ -1,10 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     User,
     Mail,
     Phone,
     Calendar,
-    MapPin,
     Edit,
     Save,
     X,
@@ -16,12 +15,11 @@ import {
     CheckCircle,
     AlertCircle,
     Camera,
-    Upload,
     Copy,
-    QrCode,
-    RefreshCw
 } from 'lucide-react';
 import { twoFAData } from '../../data/student/user';
+import { updateProfileAPI, getProfileAPI } from '../../../services/AuthService';
+
 
 const UserProfileSystem = () => {
     const [activeTab, setActiveTab] = useState('profile');
@@ -30,7 +28,6 @@ const UserProfileSystem = () => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-    const [showQRCode, setShowQRCode] = useState(false);
     const fileInputRef = useRef(null);
 
 
@@ -44,19 +41,60 @@ const UserProfileSystem = () => {
     });
 
     const [profileData, setProfileData] = useState({
-        firstName: '',
-        lastName: '',
+        full_name: '',
         email: '',
         phone: '',
         birthDate: '',
-        joinDate: '',
-        address: '',
         bio: '',
         avatar: '',
-        position: '',
-        department: '',
-        // ... các trường khác nếu có
     });
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await getProfileAPI();
+                setTwoFAEnabled(res?.twofa_enabled || false);
+                if (res && res) {
+
+                    // Nếu backend trả birth_date dạng DD/MM/YYYY thì chuyển về dạng input
+                    let birthDate = res.birth_date;
+                    if (birthDate && birthDate.includes('/')) {
+                        const [day, month, year] = birthDate.split('/');
+                        birthDate = `${year}-${month}-${day}`;
+                    }
+
+                    setProfileData(prev => ({
+                        ...prev,
+                        full_name: res.full_name || '',
+                        email: res.email || '',
+                        phone: res.phone || '',
+                        birthDate: birthDate || '',
+                        avatar: res.avatar_url || '',
+                        bio: res.bio || ''
+                    }));
+                }
+            } catch {
+                // Xử lý lỗi nếu cần
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleSaveProfile = async () => {
+        let dataToSend = { ...profileData };
+        if (dataToSend.birthDate && dataToSend.birthDate.includes('/')) {
+            // Nếu birthDate là dạng DD/MM/YYYY thì chuyển về YYYY-MM-DD
+            const [day, month, year] = dataToSend.birthDate.split('/');
+            dataToSend.birthDate = `${year}-${month}-${day}`;
+        }
+        try {
+            await updateProfileAPI(dataToSend);
+            alert('Cập nhật hồ sơ thành công!');
+            setIsEditing(false);
+        } catch {
+            // alert('Cập nhật thất bại!');
+        }
+    };
 
     // Handle profile update
     const handleProfileUpdate = (field, value) => {
@@ -175,11 +213,7 @@ const UserProfileSystem = () => {
                             className="hidden"
                         />
                     </div>
-                    <div>
-                        <h4 className="text-xl font-bold">{profileData.firstName} {profileData.lastName}</h4>
-                        <p className="text-gray-600">{profileData.position}</p>
-                        <p className="text-sm text-gray-500">{profileData.department}</p>
-                    </div>
+
                 </div>
 
                 {/* Profile Fields */}
@@ -187,36 +221,20 @@ const UserProfileSystem = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             <User className="w-4 h-4 inline mr-1" />
-                            Họ
+                            Họ và tên
                         </label>
                         {isEditing ? (
                             <input
                                 type="text"
-                                value={profileData.firstName}
-                                onChange={(e) => handleProfileUpdate('firstName', e.target.value)}
+                                value={profileData.full_name}
+                                onChange={(e) => handleProfileUpdate('full_name', e.target.value)}
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         ) : (
-                            <p className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.firstName}</p>
+                            <p className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.full_name}</p>
                         )}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <User className="w-4 h-4 inline mr-1" />
-                            Tên
-                        </label>
-                        {isEditing ? (
-                            <input
-                                type="text"
-                                value={profileData.lastName}
-                                onChange={(e) => handleProfileUpdate('lastName', e.target.value)}
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        ) : (
-                            <p className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.lastName}</p>
-                        )}
-                    </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -269,30 +287,9 @@ const UserProfileSystem = () => {
                         )}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Ngày vào làm
-                        </label>
-                        <p className="px-3 py-2 bg-gray-50 rounded-lg">{new Date(profileData.joinDate).toLocaleDateString('vi-VN')}</p>
-                    </div>
                 </div>
 
-                <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <MapPin className="w-4 h-4 inline mr-1" />
-                        Địa chỉ
-                    </label>
-                    {isEditing ? (
-                        <textarea
-                            value={profileData.address}
-                            onChange={(e) => handleProfileUpdate('address', e.target.value)}
-                            rows={2}
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    ) : (
-                        <p className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.address}</p>
-                    )}
-                </div>
+
 
                 <div className="mt-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -313,10 +310,7 @@ const UserProfileSystem = () => {
                 {isEditing && (
                     <div className="mt-6 flex gap-2">
                         <button
-                            onClick={() => {
-                                setIsEditing(false);
-                                alert('Cập nhật thông tin thành công!');
-                            }}
+                            onClick={handleSaveProfile}
                             className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                         >
                             <Save className="w-4 h-4" />
@@ -455,72 +449,7 @@ const UserProfileSystem = () => {
                             Kích hoạt 2FA
                         </button>
 
-                        {showQRCode && (
-                            <div className="border-t pt-4">
-                                <h5 className="font-medium mb-3">Thiết lập 2FA</h5>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-sm text-gray-600 mb-2">
-                                            1. Tải ứng dụng xác thực như Google Authenticator hoặc Authy
-                                        </p>
-                                        <p className="text-sm text-gray-600 mb-2">
-                                            2. Quét mã QR này hoặc nhập mã thủ công:
-                                        </p>
-                                    </div>
 
-                                    <div className="flex gap-4">
-                                        <div className="bg-gray-100 p-4 rounded-lg">
-                                            <QrCode className="w-32 h-32 text-gray-400" />
-                                            <p className="text-center text-xs mt-2">QR Code</p>
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Mã thiết lập thủ công:
-                                            </label>
-                                            <div className="flex items-center gap-2">
-                                                <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                                                    {twoFAData.secret}
-                                                </code>
-                                                <button
-                                                    onClick={() => copyToClipboard(twoFAData.secret)}
-                                                    className="p-1 text-gray-500 hover:text-gray-700"
-                                                >
-                                                    <Copy className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            3. Nhập mã xác thực từ ứng dụng:
-                                        </label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={verificationCode}
-                                                onChange={(e) => setVerificationCode(e.target.value)}
-                                                placeholder="Nhập 6 chữ số"
-                                                className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                maxLength={6}
-                                            />
-                                            <button
-                                                onClick={handleTwoFASetup}
-                                                disabled={isVerifying || verificationCode.length !== 6}
-                                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                                            >
-                                                {isVerifying ? (
-                                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    <CheckCircle className="w-4 h-4" />
-                                                )}
-                                                Xác nhận
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">

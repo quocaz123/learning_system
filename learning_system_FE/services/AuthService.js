@@ -1,29 +1,56 @@
-import axios from "./customize-axios"
+import axios from "./customize-axios";
 import { jwtDecode } from "jwt-decode";
 
-const loginAPI = (email, password) => {
-    return axios.post("/login", { email, password });
-}
+const authHeader = () => {
+    const token = localStorage.getItem("access_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
-const verifyOTP = (user_id, otp) => {
-    return axios.post("/verify-otp", { user_id, otp })
-}
+export const loginAPI = (email, password) =>
+    axios.post("/login", { email, password });
 
-const resendOTP = (user_id) => {
-    return axios.post("/resend-otp", { user_id })
-}
+export const registerAPI = (data) =>
+    axios.post("/register", data);
 
-const getName = () => {
-    const token = localStorage.getItem("token");
-    if (token && typeof token === "string") {
-        try {
-            const payload = jwtDecode(token);
-            return payload?.name || '';
-        } catch (e) {
-            console.log("Decode lỗi:", e);
-        }
+export const verifyOTP = (user_id, otp) =>
+    axios.post("/verify-otp", { user_id, otp });
+
+export const resendOTP = (user_id) =>
+    axios.post("/resend-otp", { user_id });
+
+export const updateProfileAPI = async (data) => {
+    try {
+        return await axios.post("/profile", data, {
+            headers: authHeader(),
+        });
+    } catch (e) {
+        console.error("Lỗi update profile:", e.response?.data || e.message);
+        return null;
     }
-    return '';
-}
+};
 
-export { loginAPI, verifyOTP, resendOTP, getName };
+export const getProfileAPI = async () => {
+    try {
+        return await axios.get("/profile", {
+            headers: authHeader(),
+        });
+    } catch (e) {
+        console.error("Lỗi get profile:", e.response?.data || e.message);
+        return null;
+    }
+};
+
+export const getName = () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return null;
+    try {
+        const payload = jwtDecode(token);
+        return {
+            fullName: payload?.name || '',
+            role: payload?.role || '',
+        };
+    } catch (e) {
+        console.error("Lỗi giải mã token:", e);
+        return null;
+    }
+};

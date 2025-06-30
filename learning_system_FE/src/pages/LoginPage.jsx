@@ -26,19 +26,27 @@ const LoginPage = () => {
             const res = await loginAPI(formData.email, formData.password);
             console.log('Kết quả trả về từ API:', res);
             if (res && res.access_token) {
-                localStorage.setItem('token', res.access_token);
+                localStorage.setItem('access_token', res.access_token);
+                localStorage.setItem('refresh_token', res.refresh_token);
+                localStorage.setItem('user_role', res.role);
+
                 alert('Đăng nhập thành công!');
-                navigate('/homepage')
+
+                if (res.role === 'admin') {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/homepage');
+                }
             } else if (res && res.need_2fa) {
                 setUserId(res.user_id);
                 setShowOTP(true);
-            } else if (res && res.message) {
-                alert(res.message);
             } else {
-                alert('Đăng nhập thất bại! Dữ liệu trả về không hợp lệ.');
+                alert(res?.message || 'Đăng nhập thất bại! Dữ liệu trả về không hợp lệ.');
             }
-        } catch {
-            alert('Đăng nhập thất bại!');
+        } catch (error) {
+            console.error("Lỗi đăng nhập:", error);
+            const errorMessage = error.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.';
+            alert(`Đăng nhập thất bại: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
@@ -78,11 +86,11 @@ const LoginPage = () => {
     };
 
     const handleRegister = () => {
-        alert('Chuyển đến trang đăng ký...');
+        navigate('/register')
     };
 
     const handleForgotPassword = () => {
-        alert('Chuyển đến trang quên mật khẩu...');
+        navigate('/forgot_password');
     };
 
     // Nếu đang ở bước OTP thì render OTPPage

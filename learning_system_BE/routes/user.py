@@ -55,13 +55,19 @@ def login():
     if user.is_2fa_enabled:
         otp = generate_otp(user.otp_secret)
         send_otp_email(user.email, otp)
-        return jsonify({"message": "OTP sent to email", "need_2fa": True, "user_id": str(user.id)})
+        return jsonify({"message": "OTP sent to email", "need_2fa": True, "user_id": str(user.user_id)})
 
     # Nếu không cần OTP → cấp token luôn
     access_token, refresh_token = generate_token(user)
     return jsonify({
         "access_token": access_token,
-        "refresh_token": refresh_token
+        "refresh_token": refresh_token,
+        "role": user.role,
+        "user" : {
+            "id" : user.user_id,
+            "is_2fa_enabled" : user.is_2fa_enabled,
+            "role": user.role
+        }
     })
 
 @bp.route('/refresh', methods=['POST'])
@@ -84,7 +90,13 @@ def refresh():
     new_access_token, new_refresh_token = generate_token(user)
     return jsonify({
         "access_token": new_access_token,
-        "refresh_token": new_refresh_token
+        "refresh_token": new_refresh_token,
+        "role": user.role,
+        "user" : {
+            "id" : user.user_id,
+            "is_2fa_enabled" : user.is_2fa_enabled,
+            "role": user.role
+        }
     })
 
 @bp.route("/verify-otp", methods=["POST"])
@@ -98,24 +110,18 @@ def verify_otp_route():
     if not verify_otp(user.otp_secret, data["otp"]):
         return jsonify({"message": "Invalid OTP"}), 401
 
-    access_token = generate_token(user)
-    return jsonify(access_token=access_token)
-
-@bp.route("/profile", methods=["GET"])
-@token_required(allowed_roles=["student", "teacher"])
-def profile():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-
-
+    access_token, refresh_token = generate_token(user)
     return jsonify({
-        "name": user.name,
-        "email": user.email,
-        "role": user.role
-    }), 200
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "role": user.role,
+        "user" : {
+            "id" : user.user_id,
+            "is_2fa_enabled" : user.is_2fa_enabled,
+            "role": user.role
+        }
+    })
+
 
 @bp.route("/resend-otp", methods=["POST"])
 def resend_otp():
@@ -144,7 +150,7 @@ def resend_otp():
     redis_client.incr(limit_key)
     redis_client.expire(limit_key, 600)
 
-    return jsonify({"message": "OTP sent to email", "need_2fa": True, "user_id": str(user.id)})
+    return jsonify({"message": "OTP sent to email", "need_2fa": True, "user_id": str(user.user_id)})
 
 @bp.route('/logout', methods=["POST"])
 @token_required()
@@ -157,3 +163,5 @@ def logout():
     redis_client.setex(f"blacklist:{jti}", ttl, "true")
 
     return jsonify({"message": "Đăng xuất thành công (token đã bị vô hiệu hóa)"}), 200
+
+

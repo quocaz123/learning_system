@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from config import Config
-from routes import user
+from routes import user, profile
 from flask_cors import CORS
 from database import db
 from sqlalchemy import text
@@ -26,6 +26,7 @@ def create_app():
     db.init_app(app)
     JWTManager(app)
     app.register_blueprint(user.bp)
+    app.register_blueprint(profile.profile_bp)
     return app
 
 if __name__ == "__main__":

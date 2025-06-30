@@ -42,11 +42,12 @@ const OTPPage = ({ userId, email, onBackToLogin }) => {
         if (!validateOTP()) return;
         setIsLoading(true);
         try {
-            console.log('Gửi verifyOTP:', formData.user_id, formData.otp);
             const response = await verifyOTP(formData.user_id, formData.otp);
-            console.log('Kết quả verifyOTP:', response);
+
             if (response && response.access_token) {
-                localStorage.setItem('token', response.access_token);
+                localStorage.setItem('access_token', response.access_token);
+                localStorage.setItem('refresh_token', response.refresh_token);
+                localStorage.setItem('user_role', response.role);
                 alert(' Đăng nhập thành công!');
                 navigate('/homepage');
             } else {

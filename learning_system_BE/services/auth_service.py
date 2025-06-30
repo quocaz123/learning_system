@@ -13,10 +13,9 @@ def generate_token(user):
     now = datetime.datetime.utcnow()
 
     access_payload  = {
-        "sub" : str(user.id),
-        "name" : user.name,
+        "sub" : str(user.user_id),
+        "name" : user.profile.full_name if hasattr(user, 'profile') and user.profile else "",
         "role" : user.role,
-        "2fa" : user.is_2fa_enabled,
         "iat" : now,
         "exp" : now + datetime.timedelta(minutes=15),
         "csrf" : str(uuid.uuid4()),
@@ -25,7 +24,7 @@ def generate_token(user):
     }
 
     refresh_payload = {
-        "sub" : str(user.id),
+        "sub" : str(user.user_id),
         "type" : "refresh",
         "iat" : now,
         "exp" : now + datetime.timedelta(minutes=30),
@@ -39,6 +38,8 @@ def generate_token(user):
 
 def decode_token(token):
     try:
+        if isinstance(token, str):
+            token = token.encode('utf-8')
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         return payload
     except Exception as e:

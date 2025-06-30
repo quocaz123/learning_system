@@ -6,6 +6,7 @@ import CoursesContent from '../components/Student/CoursesContent';
 import AssignmentContent from '../components/Student/AssignmentContent';
 import { profileData, courses, assignments, menuItems } from '../data/student/home';
 
+
 import {
     Home, BookOpen, FileText, MessageCircle, User, Settings,
     X, Menu, CheckCircle, Clock, BookOpenCheck, Calendar, Award, Eye, Play, Search, Bell
@@ -51,9 +52,6 @@ const HomePage = () => {
                 <TopBar
                     title={activeMenu === 'home' ? 'DASHBOARD' : menuItems.find(item => item.id === activeMenu)?.label?.toUpperCase()}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-                    userName={profileData.name}
-                    userEmail={profileData.email}
-                    avatar={profileData.avatar}
                     rightContent={
                         <button className="p-2 rounded-lg hover:bg-gray-100 relative">
                             <Bell className="h-5 w-5 text-gray-600" />
@@ -65,7 +63,7 @@ const HomePage = () => {
                     {renderContent()}
                 </div>
             </div>
-           
+
         </div>
     );
 };
