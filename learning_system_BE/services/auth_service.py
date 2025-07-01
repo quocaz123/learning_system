@@ -19,6 +19,7 @@ def generate_token(user):
         "iat" : now,
         "exp" : now + datetime.timedelta(minutes=15),
         "csrf" : str(uuid.uuid4()),
+        "2fa" : user.is_2fa_enabled,
         "type" : "access",
         "jti" : str(uuid.uuid4())
     }

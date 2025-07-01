@@ -1,6 +1,5 @@
 from database import db
 from sqlalchemy.dialects.postgresql import UUID
-import uuid
 import pyotp
 from datetime import datetime
 from sqlalchemy.orm import relationship
@@ -22,10 +21,9 @@ class User(db.Model):
 class Profile(db.Model):
     __tablename__ = 'profiles'
 
-    profile_id = db.Column(db.Integer, primary_key=True)
+    profile_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     full_name = db.Column(db.String(255))
     phone = db.Column(db.String(20))
     birth_date = db.Column(db.Date)
-    avatar_url = db.Column(db.Text)
     bio = db.Column(db.Text)

@@ -1,7 +1,8 @@
 from utils.middleware import token_required, get_jwt_identity
-from flask import Blueprint, jsonify, request, Flask
+from flask import Blueprint, jsonify, request, Flask, make_response
 from models import db, Profile, User
 from datetime import datetime
+from services.auth_service import generate_token, decode_token
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -21,7 +22,6 @@ def update_profile():
     full_name = data.get('full_name')
     phone = data.get('phone')
     birth_date_str = data.get('birth_date')
-    avatar_url = data.get('avatar_url')
     bio = data.get('bio')
 
     # Chuyển birth_date sang kiểu datetime (nếu có)
@@ -39,7 +39,6 @@ def update_profile():
             full_name=full_name,
             phone=phone,
             birth_date=birth_date,
-            avatar_url=avatar_url,
             bio=bio
         )
         db.session.add(profile)
@@ -49,7 +48,6 @@ def update_profile():
         profile.full_name = full_name or profile.full_name
         profile.phone = phone or profile.phone
         profile.birth_date = birth_date or profile.birth_date
-        profile.avatar_url = avatar_url or profile.avatar_url
         profile.bio = bio or profile.bio
 
     try:
@@ -78,7 +76,6 @@ def get_profile():
         "phone": profile.phone,
         "email": user.email,
         "birth_date": profile.birth_date.strftime("%d/%m/%Y") if profile.birth_date else None,
-        "avatar_url": profile.avatar_url,
         "bio": profile.bio
     }), 200
 
@@ -94,13 +91,27 @@ def toggle_2fa():
     data = request.get_json()
     enable_2fa = data.get("enable_2fa")
 
+    print("DEBUG enable_2fa:", enable_2fa, type(enable_2fa))
+
     if enable_2fa not in [True, False]:
          return jsonify({"error": "Invalid value for enable_2fa. Must be true or false"}), 400
     
     user.is_2fa_enabled = enable_2fa
     db.session.commit()
 
-    return jsonify({
+    new_access_token, refresh_token = generate_token(user)  # Assuming generate_access_token is defined elsewhere in the code
+
+    response = make_response(jsonify({
         "message": "2FA updated successfully",
-        "2fa_enabled": user.is_2fa_enabled
-    }), 200
+        "2fa_enabled": user.is_2fa_enabled,
+        "access_token": new_access_token
+    }))
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        httponly=True,
+        samesite='Strict',
+        secure=True,  # Chỉ dùng True nếu chạy HTTPS, dev thì để False
+        max_age=7*24*3600
+    )
+    return response

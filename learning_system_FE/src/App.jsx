@@ -7,6 +7,8 @@ import HomePage from './pages/HomePage';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import ForgotPasswordPage from './pages/ForgotPage';
+import UserProfileContent from './components/Student/UserProfileContent';
+import Unauthorized from './pages/Unauthorized';
 
 function App() {
   return (
@@ -15,24 +17,22 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/otp" element={<OTPPage />} />
-      <Route path='/forgot_password' element={<ForgotPasswordPage />} />
+      <Route path="/forgot_password" element={<ForgotPasswordPage />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Redirect root to login or a default page */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-
-      {/* Protected Routes */}
-      {/* Homepage for students and teachers */}
+      {/* Protected routes for student & teacher */}
       <Route element={<ProtectedRoute allowedRoles={['student', 'teacher']} />}>
-        <Route path="/homepage" element={<HomePage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/profile" element={<UserProfileContent />} />
       </Route>
 
-      {/* Dashboard for admins */}
+      {/* Protected route for admin */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/dashboard" element={<AdminDashboard />} />
       </Route>
 
-      {/* Fallback for any other route - optional */}
-      {/* <Route path="*" element={<NotFoundPage />} /> */}
+      {/* Redirect unknown routes */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, Flask
+from flask import Blueprint, jsonify, request, Flask, make_response
 from services.auth_service import generate_token, decode_token
 from utils.middleware import token_required, get_jwt_identity
 from marshmallow import ValidationError
@@ -11,6 +11,7 @@ from flask_redis import FlaskRedis
 from dotenv import load_dotenv 
 import os
 import datetime
+from models import Profile
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ app.config['REDIS_URL'] = os.getenv("REDIS_URL")
 redis_client = FlaskRedis(app)
 
 bp = Blueprint('user', __name__)
+profile_bp = Blueprint('profile', __name__)
 
 @bp.route("/register", methods=["POST"])
 def register():
@@ -32,15 +34,24 @@ def register_user(data):
     # Kiểm tra email đã tồn tại chưa
     if User.query.filter_by(email=data["email"]).first():
         return {"message": "Email đã tồn tại"}, 400
+
     # Tạo user mới
     user = User(
-        name=data["name"],
         email=data["email"],
         password_hash=generate_password_hash(data["password"]),
         role=data.get("role", "student")
     )
     db.session.add(user)
+    db.session.commit()  # Để user_id được sinh ra
+
+    # Tạo profile mới
+    profile = Profile(
+        user_id=user.user_id,
+        full_name=data.get("full_name", "")
+    )
+    db.session.add(profile)
     db.session.commit()
+
     return {"message": "Đăng ký thành công"}, 201
 
 @bp.route("/login", methods=["POST"])
@@ -51,53 +62,50 @@ def login():
     if not user or not check_password_hash(user.password_hash, data["password"]):
         return jsonify({"message": "Invalid credentials"}), 401
 
-    # Nếu bật 2FA, gửi OTP
     if user.is_2fa_enabled:
         otp = generate_otp(user.otp_secret)
         send_otp_email(user.email, otp)
-        return jsonify({"message": "OTP sent to email", "need_2fa": True, "user_id": str(user.user_id)})
+        return jsonify({
+            "message": "OTP sent to email",
+            "need_2fa": True,
+            "user_id": str(user.user_id)
+        }), 200
 
-    # Nếu không cần OTP → cấp token luôn
     access_token, refresh_token = generate_token(user)
-    return jsonify({
+
+    # Tạo response và gán cookie
+    response = make_response(jsonify({
         "access_token": access_token,
-        "refresh_token": refresh_token,
-        "role": user.role,
-        "user" : {
-            "id" : user.user_id,
-            "is_2fa_enabled" : user.is_2fa_enabled,
-            "role": user.role
-        }
-    })
+    }))
+    response.set_cookie("refresh_token", refresh_token, httponly=True, samesite='Strict', secure=True, max_age=7*24*3600)
+    return response, 200
+
 
 @bp.route('/refresh', methods=['POST'])
 def refresh():
-    data = request.json
-    token = data.get("refresh_token")
+    token = request.cookies.get("refresh_token")
+    if not token:
+        return jsonify({"error": "Refresh token missing"}), 401
 
     payload = decode_token(token)
     if "error" in payload:
         return jsonify(payload), 401
-    
+
     if payload.get("type") != "refresh":
         return jsonify({"error": "Không phải refresh token"}), 403
 
-    user_id = payload.get("sub")
-    user = User.query.get(user_id)
+    user = User.query.get(payload.get("sub"))
     if not user:
-         return jsonify({"error": "Không tìm thấy user"}), 404
-    
+        return jsonify({"error": "Không tìm thấy user"}), 404
+
     new_access_token, new_refresh_token = generate_token(user)
-    return jsonify({
+
+    response = make_response(jsonify({
         "access_token": new_access_token,
-        "refresh_token": new_refresh_token,
-        "role": user.role,
-        "user" : {
-            "id" : user.user_id,
-            "is_2fa_enabled" : user.is_2fa_enabled,
-            "role": user.role
-        }
-    })
+    }))
+    response.set_cookie("refresh_token", new_refresh_token, httponly=True, samesite='Strict', secure=True, max_age=7*24*3600)
+    return response
+
 
 @bp.route("/verify-otp", methods=["POST"])
 def verify_otp_route():
@@ -109,18 +117,14 @@ def verify_otp_route():
 
     if not verify_otp(user.otp_secret, data["otp"]):
         return jsonify({"message": "Invalid OTP"}), 401
-
+    
     access_token, refresh_token = generate_token(user)
-    return jsonify({
+
+    response = make_response(jsonify({
         "access_token": access_token,
-        "refresh_token": refresh_token,
-        "role": user.role,
-        "user" : {
-            "id" : user.user_id,
-            "is_2fa_enabled" : user.is_2fa_enabled,
-            "role": user.role
-        }
-    })
+    }))
+    response.set_cookie("refresh_token", refresh_token, httponly=True, samesite='Strict', secure=True, max_age=7*24*3600)
+    return response
 
 
 @bp.route("/resend-otp", methods=["POST"])
@@ -158,10 +162,9 @@ def logout():
     jti = request.user.get("jti")
     exp = request.user.get("exp")
 
-    # Tính TTL còn lại để set Redis
     ttl = exp - int(datetime.datetime.utcnow().timestamp())
     redis_client.setex(f"blacklist:{jti}", ttl, "true")
 
-    return jsonify({"message": "Đăng xuất thành công (token đã bị vô hiệu hóa)"}), 200
-
-
+    response = jsonify({"message": "Đăng xuất thành công (token đã bị vô hiệu hóa)"})
+    response.delete_cookie("refresh_token")
+    return response

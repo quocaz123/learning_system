@@ -30,7 +30,6 @@ const TopBar = ({
                     <>
                         <div className="text-right">
                             <p className="text-sm font-medium text-gray-900">{userInfo.fullName}</p>
-                            <p className="text-xs text-gray-500 capitalize">{userInfo.role}</p>
                         </div>
                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center overflow-hidden">
                             <span className="text-white text-sm font-medium">{userInfo.fullName?.[0]?.toUpperCase()}</span>

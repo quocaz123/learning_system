@@ -1,8 +1,8 @@
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { loginAPI } from '../../services/AuthService';
-import OTPPage from './OTPPage';
 import { useNavigate } from 'react-router-dom';
+import OTPPage from './OTPPage';
 
 const LoginPage = () => {
     const [formData, setFormData] = useState({
@@ -24,33 +24,24 @@ const LoginPage = () => {
         setIsLoading(true);
         try {
             const res = await loginAPI(formData.email, formData.password);
-            console.log('Kết quả trả về từ API:', res);
             if (res && res.access_token) {
                 localStorage.setItem('access_token', res.access_token);
-                localStorage.setItem('refresh_token', res.refresh_token);
-                localStorage.setItem('user_role', res.role);
-
+                navigate('/home');
                 alert('Đăng nhập thành công!');
-
-                if (res.role === 'admin') {
-                    navigate('/dashboard');
-                } else {
-                    navigate('/homepage');
-                }
-            } else if (res && res.need_2fa) {
+                console.log(res.access_token);
+            }
+            else {
                 setUserId(res.user_id);
                 setShowOTP(true);
-            } else {
-                alert(res?.message || 'Đăng nhập thất bại! Dữ liệu trả về không hợp lệ.');
             }
         } catch (error) {
-            console.error("Lỗi đăng nhập:", error);
             const errorMessage = error.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.';
             alert(`Đăng nhập thất bại: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
-    };
+    }
+
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;

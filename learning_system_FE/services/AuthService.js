@@ -54,3 +54,15 @@ export const getName = () => {
         return null;
     }
 };
+
+export const toggle2FAAPI = async () => {
+    const response = await axios.post(
+        '/2fa/toggle',
+        { enable_2fa: true },
+        {
+            headers: authHeader(),
+            withCredentials: true
+        }
+    );
+    return response;
+};

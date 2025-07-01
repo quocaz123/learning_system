@@ -22,7 +22,7 @@ redis_client = FlaskRedis(app)
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    CORS(app, origins=["http://localhost:5173"])
+    CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
     db.init_app(app)
     JWTManager(app)
     app.register_blueprint(user.bp)

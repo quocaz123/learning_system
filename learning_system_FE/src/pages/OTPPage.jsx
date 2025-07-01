@@ -46,10 +46,8 @@ const OTPPage = ({ userId, email, onBackToLogin }) => {
 
             if (response && response.access_token) {
                 localStorage.setItem('access_token', response.access_token);
-                localStorage.setItem('refresh_token', response.refresh_token);
-                localStorage.setItem('user_role', response.role);
                 alert(' Đăng nhập thành công!');
-                navigate('/homepage');
+                navigate('/home');
             } else {
                 setErrors({ otp: response?.message || 'Mã OTP không đúng hoặc đã hết hạn' });
             }
@@ -65,7 +63,7 @@ const OTPPage = ({ userId, email, onBackToLogin }) => {
         setIsLoading(true);
         try {
             const response = await resendOTP(formData.user_id);
-            if (response && response.status === 200) {
+            if (response && response.message === 'OTP sent to email') {
                 setFormData(prev => ({ ...prev, otp: '' }));
                 setErrors({});
                 setTimer(120);
