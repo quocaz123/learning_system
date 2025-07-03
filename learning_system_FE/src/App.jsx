@@ -11,33 +11,53 @@ import UserProfileContent from './components/Student/UserProfileContent';
 import Unauthorized from './pages/Unauthorized';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import TeacherDashboard from './pages/TeacherDashboard';
+import { ToastContainer, toast, Bounce } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/otp" element={<OTPPage />} />
-      <Route path="/forgot_password" element={<ForgotPasswordPage />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />
-      <Route path="/reset_password" element={<ResetPasswordPage />} />
-      <Route path="/teacher_dashboard" element={<TeacherDashboard />} />
+    <>
 
-      {/* Protected routes for student & teacher */}
-      <Route element={<ProtectedRoute allowedRoles={['student', 'teacher']} />}>
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/profile" element={<UserProfileContent />} />
-      </Route>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        transition={Bounce}
+      />
 
-      {/* Protected route for admin */}
-      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-        <Route path="/dashboard" element={<AdminDashboard />} />
-      </Route>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/otp" element={<OTPPage />} />
+        <Route path="/forgot_password" element={<ForgotPasswordPage />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/reset_password" element={<ResetPasswordPage />} />
+        <Route path="/teacher_dashboard" element={<TeacherDashboard />} />
 
-      {/* Redirect unknown routes */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+
+        {/* Protected routes for student & teacher */}
+        <Route element={<ProtectedRoute allowedRoles={['student', 'teacher']} />}>
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/profile" element={<UserProfileContent />} />
+        </Route>
+
+        {/* Protected route for admin */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/dashboard" element={<AdminDashboard />} />
+        </Route>
+
+        {/* Redirect unknown routes */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </>
   );
 }
 

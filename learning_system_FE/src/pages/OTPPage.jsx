@@ -2,6 +2,7 @@ import { Shield, ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { verifyOTP, resendOTP } from '../../services/AuthService';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const OTPPage = ({ userId, email, onBackToLogin }) => {
     const [formData, setFormData] = useState({
@@ -46,7 +47,7 @@ const OTPPage = ({ userId, email, onBackToLogin }) => {
 
             if (response && response.access_token) {
                 localStorage.setItem('access_token', response.access_token);
-                alert(' Đăng nhập thành công!');
+                toast.success(' Đăng nhập thành công!');
                 navigate('/home');
             } else {
                 setErrors({ otp: response?.message || 'Mã OTP không đúng hoặc đã hết hạn' });
@@ -74,12 +75,12 @@ const OTPPage = ({ userId, email, onBackToLogin }) => {
                 if (otpInputRef.current) {
                     otpInputRef.current.focus();
                 }
-                alert('Mã OTP mới đã được gửi đến email của bạn!');
+                toast.success('Mã OTP mới đã được gửi đến email của bạn!');
             } else {
-                alert(response?.message || 'Có lỗi xảy ra khi gửi lại OTP');
+                toast.error(response?.message || 'Có lỗi xảy ra khi gửi lại OTP');
             }
         } catch {
-            alert('Lỗi gửi lại OTP');
+            toast.error('Lỗi gửi lại OTP');
         } finally {
             setIsLoading(false);
         }

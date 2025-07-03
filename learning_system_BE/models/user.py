@@ -27,3 +27,11 @@ class Profile(db.Model):
     phone = db.Column(db.String(20))
     birth_date = db.Column(db.Date)
     bio = db.Column(db.Text)
+
+class UserCourse(db.Model):
+    __tablename__ = 'user_course'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.course_id'), nullable=False)
+    enrolled_at = db.Column(db.DateTime, default=datetime.utcnow)

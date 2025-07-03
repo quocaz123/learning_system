@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { loginAPI } from '../../services/AuthService';
 import { useNavigate } from 'react-router-dom';
 import OTPPage from './OTPPage';
+import { toast } from 'react-toastify';
 
 const LoginPage = () => {
     const [formData, setFormData] = useState({
@@ -27,7 +28,7 @@ const LoginPage = () => {
             if (res && res.access_token) {
                 localStorage.setItem('access_token', res.access_token);
                 navigate('/home');
-                alert('Đăng nhập thành công!');
+                toast.success('Đăng nhập thành công!');
                 console.log(res.access_token);
             }
             else {
@@ -36,7 +37,7 @@ const LoginPage = () => {
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.';
-            alert(`Đăng nhập thất bại: ${errorMessage}`);
+            toast.error(`Đăng nhập thất bại: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
