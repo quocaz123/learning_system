@@ -1,21 +1,41 @@
 from database import db
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
+from sqlalchemy.orm import relationship
 from datetime import datetime
 
 class Assignment(db.Model):
     __tablename__ = 'assignments'
 
     assignment_id = db.Column(db.Integer, primary_key=True)
-    lesson_id = db.Column(db.Integer, db.ForeignKey('lessons.lesson_id'))
-    type = db.Column(db.String(20))
-    title = db.Column(db.String(255))
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lessons.lesson_id'), nullable=False)
+    type = db.Column(db.String(20), default='mixed')  # code / quiz / upload / mixed
+    title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     due_date = db.Column(db.Date)
-    test_cases = db.Column(db.JSON)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    submissions = db.relationship('Submission', backref='assignment')
+    code_tests = db.relationship('AssignmentCodeTest', backref='assignment', cascade="all, delete-orphan")
+    quiz_questions = db.relationship('AssignmentQuizQuestion', backref='assignment', cascade="all, delete-orphan")
+    submissions = db.relationship('Submission', backref='assignment', cascade="all, delete-orphan")
+
+
+class AssignmentCodeTest(db.Model):
+    __tablename__ = 'assignment_code_tests'
+
+    test_id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignments.assignment_id'), nullable=False)
+    input_data = db.Column(db.Text, nullable=False)
+    expected_output = db.Column(db.Text, nullable=False)
+    score_weight = db.Column(db.Float, default=1.0)
+
+class AssignmentQuizQuestion(db.Model):
+    __tablename__ = 'assignment_quiz_questions'
+
+    question_id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignments.assignment_id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    options = db.Column(db.JSON, nullable=False)  # List[str]
+    correct_index = db.Column(db.Integer, nullable=False)
+    score_weight = db.Column(db.Float, default=1.0)
 
 class Submission(db.Model):
     __tablename__ = 'submissions'
@@ -23,12 +43,13 @@ class Submission(db.Model):
     submission_id = db.Column(db.Integer, primary_key=True)
     assignment_id = db.Column(db.Integer, db.ForeignKey('assignments.assignment_id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    code = db.Column(db.Text)
-    file_url = db.Column(db.Text)
-    status = db.Column(db.String(20))
+    code = db.Column(db.Text)  # nếu là bài lập trình
+    quiz_answers = db.Column(db.JSON)  # list[int], nếu là bài quiz
+    file_url = db.Column(db.Text)  # nếu là bài upload
+    status = db.Column(db.String(20), default='draft')  # draft, submitted
     submitted_at = db.Column(db.DateTime)
 
-    grades = db.relationship('Grade', backref='submission', uselist=False)
+    grade = db.relationship('Grade', backref='submission', uselist=False, cascade="all, delete-orphan")
 
 class Grade(db.Model):
     __tablename__ = 'grades'

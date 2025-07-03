@@ -66,3 +66,9 @@ export const toggle2FAAPI = async () => {
     );
     return response;
 };
+
+export const changePasswordAPI = async (data) => {
+    return await axios.post("/change-password", data, {
+        headers: authHeader(),
+    });
+};

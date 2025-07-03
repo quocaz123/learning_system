@@ -1,4 +1,5 @@
 import React from "react";
+import { BookOpen } from 'lucide-react';
 
 const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, headerContent }) => (
     <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-sm border-r border-gray-200 transition-all duration-300`}>
@@ -8,7 +9,7 @@ const Sidebar = ({ sidebarItems, activeTab, setActiveTab, sidebarOpen, headerCon
             ) : (
                 <div className="flex items-center space-x-3">
                     <div className="bg-blue-600 p-2 rounded-lg">
-                        {/* Có thể thêm icon/logo ở đây nếu muốn */}
+                        <BookOpen className="h-6 w-6 text-white" />
                     </div>
                     {sidebarOpen && (
                         <div>

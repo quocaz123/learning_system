@@ -9,6 +9,8 @@ import ProtectedRoute from './components/Common/ProtectedRoute';
 import ForgotPasswordPage from './pages/ForgotPage';
 import UserProfileContent from './components/Student/UserProfileContent';
 import Unauthorized from './pages/Unauthorized';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import TeacherDashboard from './pages/TeacherDashboard';
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
       <Route path="/otp" element={<OTPPage />} />
       <Route path="/forgot_password" element={<ForgotPasswordPage />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/reset_password" element={<ResetPasswordPage />} />
+      <Route path="/teacher_dashboard" element={<TeacherDashboard />} />
 
       {/* Protected routes for student & teacher */}
       <Route element={<ProtectedRoute allowedRoles={['student', 'teacher']} />}>

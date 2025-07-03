@@ -115,3 +115,4 @@ def toggle_2fa():
         max_age=7*24*3600
     )
     return response
+

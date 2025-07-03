@@ -1,25 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
-import { getName } from '../../../services/AuthService';
 
-const TopBar = ({
-    title,
-    onMenuClick,
-    rightContent
-}) => {
-    const [userInfo, setUserInfo] = useState(null);
-
-    useEffect(() => {
-        const data = getName();
-        if (data) {
-            setUserInfo(data);
-        }
-    }, []);
+const TopBar = ({ title, onMenuClick, rightContent, userInfo: userInfoProp }) => {
+    // Cho phép truyền userInfo từ props, nếu không có thì mặc định là Giảng viên
+    const [userInfo] = useState(userInfoProp || { fullName: 'Giảng viên' });
 
     return (
         <div className="bg-white shadow-sm border-b px-4 py-3 flex items-center justify-between">
             <div className="flex items-center">
-                <button onClick={onMenuClick} className="mr-3">
+                <button onClick={onMenuClick} className="mr-3 p-2 hover:bg-gray-100 rounded-lg">
                     <Menu size={24} />
                 </button>
                 <h1 className="text-xl font-semibold text-gray-800">{title}</h1>

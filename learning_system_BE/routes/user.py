@@ -168,3 +168,70 @@ def logout():
     response = jsonify({"message": "Đăng xuất thành công (token đã bị vô hiệu hóa)"})
     response.delete_cookie("refresh_token")
     return response
+
+@bp.route('/forgot-password', methods=["POST"])
+def forgot_password():
+    data = request.json
+    email = data.get("email")
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"message": "Email not found"}), 404
+
+    otp = generate_otp(user.otp_secret)
+    send_otp_email(user.email, otp)
+
+    return jsonify({
+            "message": "OTP sent to email",
+            "user_id": str(user.user_id),
+        }), 200
+
+@bp.route('/reset-password', methods=["POST"])
+def reset_password():
+    data = request.json
+    user_id = data.get("user_id")
+    otp_input = data.get("otp")
+    new_password = data.get("new_password")
+    confirm_password = data.get("confirm_password")
+    if new_password != confirm_password:
+        return jsonify({"message": "Passwords do not match"}), 400
+
+    user = User.query.get(user_id)
+    if not user or not user.is_2fa_enabled:
+        return jsonify({"message": "User not found or 2FA not enabled"}), 400
+
+    if not verify_otp(user.otp_secret, otp_input):
+        return jsonify({"message": "Invalid OTP"}), 401
+
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password reset successfully"}), 200
+
+@bp.route('/change-password', methods=["POST"])
+@token_required()
+def change_password():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    data = request.json
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+    confirm_password = data.get("confirm_password")
+
+    if not check_password_hash(user.password_hash, current_password):
+        return jsonify({"message": "Current password is incorrect"}), 401
+
+    if new_password != confirm_password:
+        return jsonify({"message": "New passwords do not match"}), 400
+
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Password changed successfully",
+        "status" : 200
+        })

@@ -14,7 +14,7 @@ import {
     Key,
     AlertCircle,
 } from 'lucide-react';
-import { updateProfileAPI, getProfileAPI, toggle2FAAPI } from '../../../services/AuthService';
+import { updateProfileAPI, getProfileAPI, toggle2FAAPI, changePasswordAPI } from '../../../services/AuthService';
 import { jwtDecode } from "jwt-decode";
 
 // Component con: ProfileTab
@@ -157,10 +157,10 @@ const SecurityTab = ({ twoFAEnabled, handleToggle2FA, passwordData, setPasswordD
                     <div className="relative">
                         <input
                             type={showCurrentPassword ? 'text' : 'password'}
-                            value={passwordData.currentPassword}
+                            value={passwordData.current_password}
                             onChange={(e) => setPasswordData(prev => ({
                                 ...prev,
-                                currentPassword: e.target.value
+                                current_password: e.target.value
                             }))}
                             className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Nhập mật khẩu hiện tại"
@@ -182,10 +182,10 @@ const SecurityTab = ({ twoFAEnabled, handleToggle2FA, passwordData, setPasswordD
                     <div className="relative">
                         <input
                             type={showNewPassword ? 'text' : 'password'}
-                            value={passwordData.newPassword}
+                            value={passwordData.new_password}
                             onChange={(e) => setPasswordData(prev => ({
                                 ...prev,
-                                newPassword: e.target.value
+                                new_password: e.target.value
                             }))}
                             className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Nhập mật khẩu mới"
@@ -208,10 +208,10 @@ const SecurityTab = ({ twoFAEnabled, handleToggle2FA, passwordData, setPasswordD
                     <div className="relative">
                         <input
                             type={showConfirmPassword ? 'text' : 'password'}
-                            value={passwordData.confirmPassword}
+                            value={passwordData.confirm_password}
                             onChange={(e) => setPasswordData(prev => ({
                                 ...prev,
-                                confirmPassword: e.target.value
+                                confirm_password: e.target.value
                             }))}
                             className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Xác nhận mật khẩu mới"
@@ -297,11 +297,26 @@ const UserProfileSystem = () => {
     });
     const fileInputRef = useRef(null);
 
-    const [passwordData, setPasswordData] = useState({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
+    const [passwordData, setPasswordData] = useState(() => {
+        let user_id = '';
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            try {
+                const payload = jwtDecode(token);
+                user_id = payload.user_id || payload.sub || '';
+            } catch (err) {
+                console.error('Lỗi giải mã token:', err);
+            }
+        }
+    
+        return {
+            user_id,
+            current_password: '',
+            new_password: '',
+            confirm_password: ''
+        };
     });
+    
 
     const [profileData, setProfileData] = useState({
         full_name: '',
@@ -379,21 +394,30 @@ const UserProfileSystem = () => {
     };
 
     // Handle password change
-    const handlePasswordChange = () => {
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
+    const handlePasswordChange = async () => {
+        if (passwordData.new_password !== passwordData.confirm_password) {
             alert('Mật khẩu xác nhận không khớp!');
             return;
         }
-        if (passwordData.newPassword.length < 8) {
+        if (passwordData.new_password.length < 8) {
             alert('Mật khẩu phải có ít nhất 8 ký tự!');
             return;
         }
-        alert('Đổi mật khẩu thành công!');
-        setPasswordData({
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: ''
-        });
+        console.log(passwordData);
+        try {
+            const res = await changePasswordAPI(passwordData);
+            if (res && res.status === 200) {
+            alert('Đổi mật khẩu thành công!');
+            setPasswordData({
+                user_id: '',
+                current_password: '',
+                new_password: '',
+                confirm_password: ''
+            });
+            }
+        } catch (error) {
+            console.error('Lỗi đổi mật khẩu:', error);
+        }
     };
 
     const handleToggle2FA = async (enable) => {
