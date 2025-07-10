@@ -14,7 +14,7 @@ import {
     Key,
     AlertCircle,
 } from 'lucide-react';
-import { updateProfileAPI, getProfileAPI, toggle2FAAPI, changePasswordAPI } from '../../../services/AuthService';
+import { updateProfileAPI, getProfileAPI, toggle2FAAPI, changePasswordAPI, logoutAPI } from '../../../services/AuthService';
 import { jwtDecode } from "jwt-decode";
 
 // Component con: ProfileTab
@@ -308,7 +308,7 @@ const UserProfileSystem = () => {
                 console.error('Lỗi giải mã token:', err);
             }
         }
-    
+
         return {
             user_id,
             current_password: '',
@@ -316,7 +316,7 @@ const UserProfileSystem = () => {
             confirm_password: ''
         };
     });
-    
+
 
     const [profileData, setProfileData] = useState({
         full_name: '',
@@ -407,13 +407,13 @@ const UserProfileSystem = () => {
         try {
             const res = await changePasswordAPI(passwordData);
             if (res && res.status === 200) {
-            alert('Đổi mật khẩu thành công!');
-            setPasswordData({
-                user_id: '',
-                current_password: '',
-                new_password: '',
-                confirm_password: ''
-            });
+                alert('Đổi mật khẩu thành công!');
+                setPasswordData({
+                    user_id: '',
+                    current_password: '',
+                    new_password: '',
+                    confirm_password: ''
+                });
             }
         } catch (error) {
             console.error('Lỗi đổi mật khẩu:', error);
@@ -465,6 +465,21 @@ const UserProfileSystem = () => {
             }
         }
         return false;
+    };
+
+    const handleLogout = async () => {
+        try {
+            const res = await logoutAPI();
+            if (res && res.data && res.data.message) {
+                alert(res.data.message);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
     };
 
     return (
@@ -525,6 +540,12 @@ const UserProfileSystem = () => {
                     setShowConfirmPassword={setShowConfirmPassword}
                 />}
             </div>
+            <button
+                onClick={handleLogout}
+                className="mt-6 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
+            >
+                Đăng xuất
+            </button>
         </div>
     );
 };

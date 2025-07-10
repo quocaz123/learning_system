@@ -72,3 +72,5 @@ export const changePasswordAPI = async (data) => {
         headers: authHeader(),
     });
 };
+
+export const logoutAPI = () => axios.post('/logout');

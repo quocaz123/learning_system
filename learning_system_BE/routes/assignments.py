@@ -8,6 +8,8 @@ from services.assignment_service import (
     delete_assigment as delete_assignment_service,
 )
 from models import UserCourse, Lesson, Assignment, AssignmentQuizQuestion, Submission
+from models.log import Log
+from database import db
 
 assignment_bp = Blueprint('assignment', __name__)
 
@@ -119,12 +121,10 @@ def get_my_assignments():
 def submit_assignment(assignment_id):
     user_id = get_jwt_identity()
     data = request.get_json()
-    from models import Submission
-    from database import db
+    from models import Submission, Assignment
     code = data.get('code')
     file_url = data.get('file_url')
     quiz_answers = data.get('quiz_answers')
-
     submission = Submission.query.filter_by(assignment_id=assignment_id, user_id=user_id).first()
     if not submission:
         submission = Submission(
@@ -142,4 +142,26 @@ def submit_assignment(assignment_id):
         submission.quiz_answers = quiz_answers
         submission.status = 'submitted'
     db.session.commit()
+    # Ghi log
+    assignment = Assignment.query.get(assignment_id)
+    log = Log(user_id=user_id, action_type='assignment_submitted', action_data={'assignment_id': assignment_id, 'assignment_title': assignment.title})
+    db.session.add(log)
+    db.session.commit()
     return jsonify({"success": True, "message": "Nộp bài thành công!"})
+
+@assignment_bp.route('/my-assignments/statistics', methods=['GET'])
+@token_required()
+def get_my_assignments_statistics():
+    user_id = get_jwt_identity()
+    submissions = Submission.query.filter_by(user_id=user_id).all()
+    submitted_count = 0
+    grading_count = 0
+    for sub in submissions:
+        if sub.status == 'submitted':
+            submitted_count += 1
+            if not sub.grade:
+                grading_count += 1
+    return jsonify({
+        "submitted_count": submitted_count,
+        "grading_count": grading_count
+    }), 200

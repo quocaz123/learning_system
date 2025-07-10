@@ -10,9 +10,8 @@ import UserProfileContent from './components/Student/UserProfileContent';
 import Unauthorized from './pages/Unauthorized';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import TeacherDashboard from './pages/TeacherDashboard';
-import { ToastContainer, toast, Bounce } from 'react-toastify';
+import { ToastContainer, Bounce } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import CourseContent from './components/Student/CourseContent';
 import HomePage from './pages/HomePage';
 function App() {
   return (
@@ -40,7 +39,6 @@ function App() {
         <Route path="/forgot_password" element={<ForgotPasswordPage />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/reset_password" element={<ResetPasswordPage />} />
-        <Route path='/content' element={<CourseContent />} />
         <Route path="/home" element={<HomePage />} />
 
 

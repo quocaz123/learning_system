@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-    ChevronRight,
-    ChevronDown,
-    Play,
     FileText,
-    Download,
-    Eye,
-    Clock,
-    Target,
     BookOpen,
-    Code,
-    Video,
-    FileImage,
+
 } from 'lucide-react';
 import { getMyCoursesAPI, getLessonDetailAPI, completeLessonAPI } from '../../../services/CourseService';
 import { getName } from '../../../services/AuthService';
 
-const CoursesContent = () => {
+const CoursesContent = ({ selectedCourse }) => {
     const [courses, setCourses] = useState([]);
-    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [selected, setSelected] = useState(selectedCourse ? selectedCourse.course_id : null);
     const [selectedLesson, setSelectedLesson] = useState(null);
     const [lessonDetail, setLessonDetail] = useState(null);
     const [isCompleted, setIsCompleted] = useState(false);
@@ -28,10 +19,16 @@ const CoursesContent = () => {
             .then(res => {
                 setCourses(res.data || []);
                 console.log("API /my-courses:", res.data);
-                if (res.data && res.data.length > 0) setSelectedCourse(res.data[0].course_id);
+                if (res.data && res.data.length > 0) setSelected(res.data[0].course_id);
             })
             .catch(() => setCourses([]));
     }, []);
+
+    useEffect(() => {
+        if (selectedCourse && selectedCourse.course_id) {
+            setSelected(selectedCourse.course_id);
+        }
+    }, [selectedCourse]);
 
     const handleSelectLesson = (lesson) => {
         setSelectedLesson(lesson);
@@ -55,8 +52,8 @@ const CoursesContent = () => {
                         {courses.map((course) => (
                             <button
                                 key={course.course_id}
-                                onClick={() => setSelectedCourse(course.course_id)}
-                                className={`w-full text-left p-3 rounded-lg transition-colors ${selectedCourse === course.course_id ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                                onClick={() => setSelected(course.course_id)}
+                                className={`w-full text-left p-3 rounded-lg transition-colors ${selected === course.course_id ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
                             >
                                 <div className="font-medium">{course.title}</div>
                                 <div className="text-sm text-gray-500">{course.description}</div>
@@ -68,7 +65,7 @@ const CoursesContent = () => {
                 <div className="p-4">
                     <h3 className="font-semibold text-gray-800 mb-3">Danh sách bài học</h3>
                     <div className="space-y-2">
-                        {courses.find(c => c.course_id === selectedCourse)?.lessons.map((lesson) => (
+                        {courses.find(c => c.course_id === selected)?.lessons.map((lesson) => (
                             <button
                                 key={lesson.lesson_id}
                                 onClick={() => handleSelectLesson(lesson)}
@@ -97,7 +94,7 @@ const CoursesContent = () => {
                         <div className="mb-6">
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                                 <BookOpen className="w-4 h-4" />
-                                {courses.find(c => c.course_id === selectedCourse)?.title}
+                                {courses.find(c => c.course_id === selected)?.title}
                             </div>
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">{lessonDetail.title}</h1>
                             <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: lessonDetail.content_html }} />
@@ -171,7 +168,7 @@ const CoursesContent = () => {
                                         className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-medium"
                                         onClick={() => {
                                             const userInfo = getName();
-                                            completeLessonAPI(userInfo.id, lessonDetail.lesson_id, selectedCourse)
+                                            completeLessonAPI(userInfo.id, lessonDetail.lesson_id, selected)
                                                 .then(() => setIsCompleted(true));
                                         }}
                                     >

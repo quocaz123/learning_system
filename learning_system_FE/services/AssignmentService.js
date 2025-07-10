@@ -45,9 +45,14 @@ export const submitAssignmentAPI = (assignmentId, data) =>
     });
 
 const getMyAssignments = () => axios.get('/my-assignments');
+const getRecentLogs = () => axios.get('/logs/recent', { headers: authHeader() });
+const getStatusAssignment = () => axios.get('/my-assignments/statistics', { headers: authHeader() });
 
 const AssignmentService = {
     getMyAssignments,
+    submitAssignmentAPI,
+    getStatusAssignment,
+    getRecentLogs,
 };
 
 export default AssignmentService;

@@ -4,6 +4,9 @@ from models import User, Course, Lesson , UserCourse, LessonProgress
 from services.course_service import count_completed_lessons, get_all_courses_service, get_lesson_detail_service
 from models import assignment
 import logging
+from models.log import Log
+from database import db
+import datetime
 
 course_bp = Blueprint('course', __name__)
 lesson_bp = Blueprint('lesson', __name__)
@@ -82,6 +85,7 @@ def get_all_courses():
     results = get_all_courses_service(user_id)
     return jsonify({"data": results, "status": 200})
 
+
 @lesson_bp.route('/lessons/complete', methods=['POST'])
 @token_required()
 def complete_lesson():
@@ -100,7 +104,11 @@ def complete_lesson():
         progress = LessonProgress(user_id=user_id, lesson_id=lesson_id, completed=True, completed_at=datetime.utcnow())
         from database import db
         db.session.add(progress)
-    from database import db
+    db.session.commit()
+    # Ghi log
+    lesson = Lesson.query.get(lesson_id)
+    log = Log(user_id=user_id, action_type='lesson_completed', action_data={'lesson_id': lesson_id, 'lesson_title': lesson.title})
+    db.session.add(log)
     db.session.commit()
     return jsonify({'success': True, 'message': 'Đã hoàn thành bài học!'})
 

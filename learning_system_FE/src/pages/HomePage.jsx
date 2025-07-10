@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Common/Sidebar';
 import TopBar from '../components/Common/TopBar';
 import HomeContent from '../components/Student/HomeContent';
 import CoursesContent from '../components/Student/CoursesContent';
 import AssignmentContent from '../components/Student/AssignmentContent';
-import { profileData, courses, assignments, menuItems } from '../data/student/home';
+import { menuItems } from '../data/student/home';
 import { Bell } from 'lucide-react';
 import UserProfileContent from '../components/Student/UserProfileContent';
+import { getName } from "../../services/AuthService"
 
 const HomePage = () => {
     const [activeMenu, setActiveMenu] = useState('home');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState(null);
-    const [currentView, setCurrentView] = useState('home');
+    const [studentName, setStudentName] = useState('');
+    const [role, setRole] = useState('');
+
+    useEffect(() => {
+        const userInfo = getName();
+        if (userInfo) {
+            setStudentName(userInfo.fullName || '');
+            setRole(userInfo.role || 'Student');
+        }
+    }, []);
 
     // Hàm đăng ký khóa học
     const enrollCourse = (courseId) => {
@@ -24,16 +34,15 @@ const HomePage = () => {
     const renderContent = () => {
         switch (activeMenu) {
             case 'home':
-                return <HomeContent 
-                    studentName={profileData.name} 
-                    courses={courses} 
-                    assignments={assignments}
+                return <HomeContent
+                    studentName={studentName}
                     setSelectedCourse={setSelectedCourse}
-                    setCurrentView={setCurrentView}
+                    setActiveMenu={setActiveMenu}
                     enrollCourse={enrollCourse}
+                    setStudentName={setStudentName}
                 />;
             case 'courses':
-                return <CoursesContent />
+                return <CoursesContent selectedCourse={selectedCourse} />
             case 'assignments':
                 return <AssignmentContent />;
             case 'profile':
@@ -62,6 +71,8 @@ const HomePage = () => {
                 <TopBar
                     title={activeMenu === 'home' ? 'DASHBOARD' : menuItems.find(item => item.id === activeMenu)?.label?.toUpperCase()}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+                    studentName={studentName}
+                    role={role}
                     rightContent={
                         <button className="p-2 rounded-lg hover:bg-gray-100 relative">
                             <Bell className="h-5 w-5 text-gray-600" />

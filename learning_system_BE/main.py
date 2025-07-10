@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from config import Config
-from routes import user, profile, assignments, courses
+from routes import user, profile, assignments, courses, log
 from flask_cors import CORS
 from database import db
 from sqlalchemy import text
@@ -31,6 +31,7 @@ def create_app():
     app.register_blueprint(courses.course_bp)
     app.register_blueprint(user.course_user)
     app.register_blueprint(courses.lesson_bp)
+    app.register_blueprint(log.log_bp)
     # Đăng ký blueprint cho LM Studio
     from routes.lmstudio import lmstudio_bp
     app.register_blueprint(lmstudio_bp)
