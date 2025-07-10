@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OTPPage from './pages/OTPPage';
-import HomePage from './pages/HomePage';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import ForgotPasswordPage from './pages/ForgotPage';
@@ -13,7 +12,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import TeacherDashboard from './pages/TeacherDashboard';
 import { ToastContainer, toast, Bounce } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import CourseContent from './components/Student/CourseContent';
+import HomePage from './pages/HomePage';
 function App() {
   return (
     <>
@@ -40,13 +40,14 @@ function App() {
         <Route path="/forgot_password" element={<ForgotPasswordPage />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/reset_password" element={<ResetPasswordPage />} />
-        <Route path="/teacher_dashboard" element={<TeacherDashboard />} />
+        <Route path='/content' element={<CourseContent />} />
+        <Route path="/home" element={<HomePage />} />
 
 
         {/* Protected routes for student & teacher */}
-        <Route element={<ProtectedRoute allowedRoles={['student', 'teacher']} />}>
-          <Route path="/home" element={<HomePage />} />
+        <Route element={<ProtectedRoute allowedRoles={['admin', 'student', 'teacher']} />}>
           <Route path="/profile" element={<UserProfileContent />} />
+          <Route path="/teacher_dashboard" element={<TeacherDashboard />} />
         </Route>
 
         {/* Protected route for admin */}

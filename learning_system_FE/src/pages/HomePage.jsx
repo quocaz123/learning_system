@@ -5,23 +5,33 @@ import HomeContent from '../components/Student/HomeContent';
 import CoursesContent from '../components/Student/CoursesContent';
 import AssignmentContent from '../components/Student/AssignmentContent';
 import { profileData, courses, assignments, menuItems } from '../data/student/home';
-
-
-import {
-    Home, BookOpen, FileText, MessageCircle, User, Settings,
-    X, Menu, CheckCircle, Clock, BookOpenCheck, Calendar, Award, Eye, Play, Search, Bell
-} from 'lucide-react';
+import { Bell } from 'lucide-react';
 import UserProfileContent from '../components/Student/UserProfileContent';
 
 const HomePage = () => {
     const [activeMenu, setActiveMenu] = useState('home');
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [currentView, setCurrentView] = useState('home');
+
+    // Hàm đăng ký khóa học
+    const enrollCourse = (courseId) => {
+        console.log('Đăng ký khóa học:', courseId);
+        // TODO: Implement enrollment logic
+    };
 
     // Hàm renderContent
     const renderContent = () => {
         switch (activeMenu) {
             case 'home':
-                return <HomeContent studentName={profileData.name} courses={courses} assignments={assignments} />;
+                return <HomeContent 
+                    studentName={profileData.name} 
+                    courses={courses} 
+                    assignments={assignments}
+                    setSelectedCourse={setSelectedCourse}
+                    setCurrentView={setCurrentView}
+                    enrollCourse={enrollCourse}
+                />;
             case 'courses':
                 return <CoursesContent />
             case 'assignments':

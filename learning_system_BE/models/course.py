@@ -54,3 +54,13 @@ class LessonAttachment(db.Model):
     file_url = db.Column(db.Text)
     file_type = db.Column(db.Text)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class LessonProgress(db.Model):
+    __tablename__ = 'lesson_progress'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lessons.lesson_id'), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime)
+

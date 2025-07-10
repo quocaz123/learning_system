@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2, Save, Code, FileQuestion } from 'lucide-react';
-import { exerciseTypes } from '../../data/teacher/exercise';
-import { toast } from 'react-toastify';
-import { createAssignmentAPI, getCoursesByUserAPI, getLessonByCourseIdAPI } from '../../../services/AssignmentService';
+import { lessons, exerciseTypes } from '../../data/teacher/exercise';
 
 const AssignmentCreate = () => {
     const [formData, setFormData] = useState({
@@ -12,46 +10,8 @@ const AssignmentCreate = () => {
         description: '',
         due_date: '',
         code_tests: [],
-        quiz_questions: [],
-        course_id: ''
+        quiz_questions: []
     });
-
-    const [courses, setCourses] = useState([]);
-    const [lessonsByCourse, setLessonsByCourse] = useState([]);
-
-    // Lấy danh sách khóa học khi mount
-    useEffect(() => {
-        const getCourses = async () => {
-            try {
-                const res = await getCoursesByUserAPI();
-                console.log(res);
-                setCourses(res.result || []);
-            } catch {
-                setCourses([]);
-            }
-        };
-        getCourses();
-    }, []);
-
-    // Khi chọn khóa học, gọi API lấy lesson
-    const handleCourseChange = async (e) => {
-        const courseId = e.target.value;
-        setFormData(prev => ({
-            ...prev,
-            course_id: courseId,
-            lesson_id: ''
-        }));
-        if (courseId) {
-            try {
-                const res = await getLessonByCourseIdAPI(courseId);
-                setLessonsByCourse(res.result || []);
-            } catch {
-                setLessonsByCourse([]);
-            }
-        } else {
-            setLessonsByCourse([]);
-        }
-    };
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -111,28 +71,9 @@ const AssignmentCreate = () => {
         }));
     };
 
-    const handleSubmit = async () => {
-        try {
-            const res = await createAssignmentAPI(formData);
-            if (res && res.status === 201) {
-                toast.success('Tạo bài tập thành công!');
-                setFormData({
-                    lesson_id: '',
-                    type: 'code',
-                    title: '',
-                    description: '',
-                    due_date: '',
-                    code_tests: [],
-                    quiz_questions: [],
-                    course_id: ''
-                });
-            }
-        } catch (error) {
-            toast.error(`Tạo bài tập thất bại: ${error.message}`);
-        }
-
+    const handleSubmit = () => {
         if (!formData.lesson_id || !formData.title || !formData.description || !formData.due_date) {
-            toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!');
+            alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
             return;
         }
 
@@ -146,12 +87,7 @@ const AssignmentCreate = () => {
                 code_tests: formData.code_tests.filter(test => test.input_data && test.expected_output)
             } : {}),
             ...(formData.type === 'quiz' || formData.type === 'mixed' ? {
-                quiz_questions: formData.quiz_questions
-                    .filter(q => q.question_text && q.options.every(opt => opt))
-                    .map(q => ({
-                        ...q,
-                        score_weight: q.score_weight !== undefined ? q.score_weight : 1.0
-                    }))
+                quiz_questions: formData.quiz_questions.filter(q => q.question_text && q.options.every(opt => opt))
             } : {})
         };
 
@@ -163,37 +99,32 @@ const AssignmentCreate = () => {
     const showQuiz = formData.type === 'quiz' || formData.type === 'mixed';
 
     return (
-        <div className="bg-white rounded-xl shadow p-6 space-y-6">
+        <div className="  bg-white rounded-xl shadow p-6 space-y-6">
             <h2 className="text-xl font-bold text-blue-700">Tạo bài tập mới</h2>
 
+            {/* Select Lesson */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm text-gray-600 mb-1">Chọn khóa học *</label>
-                    <select
-                        value={formData.course_id}
-                        onChange={handleCourseChange}
-                        className="w-full mt-1 border rounded px-3 py-2"
-                    >
-                        <option value="">-- Chọn khóa học --</option>
-                        {Array.isArray(courses) && courses.map(course => (
-                            <option key={course.course_id} value={course.course_id}>{course.title}</option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm text-gray-600 mb-1">Chọn bài học *</label>
-                    <select
-                        value={formData.lesson_id}
-                        onChange={e => handleInputChange('lesson_id', e.target.value)}
-                        className="w-full mt-1 border rounded px-3 py-2"
-                        disabled={!formData.course_id}
-                    >
-                        <option value="">-- Chọn bài học --</option>
-                        {Array.isArray(lessonsByCourse) && lessonsByCourse.map(lesson => (
-                            <option key={lesson.lesson_id} value={lesson.lesson_id}>{lesson.title}</option>
-                        ))}
-                    </select>
-                </div>
+                <label className="block text-sm text-gray-600 mb-1">Chọn bài học *</label>
+                <select
+                    value={formData.lesson_id}
+                    onChange={(e) => handleInputChange('lesson_id', e.target.value)}
+                    className="w-full mt-1 border rounded px-3 py-2"
+                >
+                    <option value="">-- Chọn bài học --</option>
+                    {lessons.map(lesson => (
+                        <option key={lesson.id} value={lesson.id}>{lesson.name}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div>
+                <label className="block text-sm text-gray-600 mb-1">Hạn chót *</label>
+                <input
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) => handleInputChange('due_date', e.target.value)}
+                    className="w-full mt-1 border rounded px-3 py-2"
+                />
             </div>
 
             {/* Title + Description */}
@@ -217,15 +148,7 @@ const AssignmentCreate = () => {
                 />
             </div>
 
-            <div>
-                <label className="block text-sm text-gray-600 ">Hạn chót *</label>
-                <input
-                    type="date"
-                    value={formData.due_date}
-                    onChange={(e) => handleInputChange('due_date', e.target.value)}
-                    className="w-full mt-1 border rounded px-3 py-2"
-                />
-            </div>
+
 
             {/* Type selector */}
             <div>

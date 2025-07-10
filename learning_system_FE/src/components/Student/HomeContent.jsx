@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpenCheck, CheckCircle, Clock } from 'lucide-react';
+import { BookOpenCheck, CheckCircle, Clock, BookOpen, User } from 'lucide-react';
 import { getName } from "../../../services/AuthService"
+import { getAllCoursesAPI, enrollCourseAPI } from '../../../services/CourseService';
 
-const HomeContent = ({ courses, assignments }) => {
+
+const HomeContent = ({ assignments, setSelectedCourse, setCurrentView }) => {
     const [studentName, setStudentName] = useState('');
+    const [courses, setCourses] = useState([]);
 
     useEffect(() => {
         const userInfo = getName();
@@ -12,14 +15,35 @@ const HomeContent = ({ courses, assignments }) => {
         }
     }, []);
 
+    useEffect(() => {
+        getAllCoursesAPI()
+            .then(res => {
+                setCourses(res.data || []);
+            })
+            .catch(() => setCourses([]));
+    }, []);
+
+    const handleEnroll = (courseId) => {
+        enrollCourseAPI(courseId)
+            .then(() => {
+                getAllCoursesAPI().then(res => setCourses(res.data || []));
+            })
+            .catch(() => {
+               
+            });
+    };
+
     return (
         <div className="space-y-6">
+            {/* Welcome Section */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg">
                 <h2 className="text-2xl font-bold mb-2">Xin chào, {studentName}!</h2>
                 <p className="text-blue-100">Chào mừng bạn trở lại với hệ thống học tập</p>
             </div>
 
+            {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Current Courses */}
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
                         <BookOpenCheck className="mr-2 text-blue-500" size={20} />
@@ -29,13 +53,13 @@ const HomeContent = ({ courses, assignments }) => {
                         {courses.map((course, index) => (
                             <div key={index} className="border-l-4 border-blue-500 pl-4">
                                 <div className="flex justify-between items-center mb-2">
-                                    <h4 className="font-medium">{course.name}</h4>
-                                    <span className="text-sm text-gray-600">{course.progress}%</span>
+                                    <h4 className="font-medium">{course.title}</h4>
+                                    <span className="text-sm text-gray-600">{course.percent_completed}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
                                         className={`${course.color} h-2 rounded-full transition-all duration-500`}
-                                        style={{ width: `${course.progress}%` }}
+                                        style={{ width: `${course.percent_completed}%` }}
                                     ></div>
                                 </div>
                             </div>
@@ -60,6 +84,85 @@ const HomeContent = ({ courses, assignments }) => {
                 </div>
             </div>
 
+            {/* My Courses Section */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="mb-6 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">Khóa học của tôi</h1>
+                        <p className="text-gray-600">Khám phá và đăng ký các khóa học mới</p>
+                    </div>
+                    <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors">
+                        <BookOpen className="w-5 h-5" />
+                        Xem tất cả
+                    </button>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {courses.map(course => (
+                        <div key={course.course_id} className="bg-gray-50 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                    {course.language}
+                                </span>
+                                {course.is_enrolled && (
+                                    <div className="flex items-center text-green-600">
+                                        <CheckCircle className="w-4 h-4 mr-1" />
+                                        <span className="text-sm">Đã đăng ký</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">{course.title}</h3>
+                            <p className="text-gray-600 mb-4 text-sm">{course.description}</p>
+
+                            <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                <div className="flex items-center">
+                                    <BookOpen className="w-4 h-4 mr-1" />
+                                    <span>{course.lesson_count} bài học</span>
+                                </div>
+                                <div className="flex items-center">
+                                    <User className="w-4 h-4 mr-1" />
+                                    <span>{course.author}</span>
+                                </div>
+                            </div>
+
+                            {course.is_enrolled && course.percent_completed > 0 && (
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Tiến độ</span>
+                                        <span>{course.percent_completed}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${course.percent_completed}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={() => {
+                                    if (course.is_enrolled) {
+                                        setSelectedCourse && setSelectedCourse(course);
+                                        setCurrentView && setCurrentView('courseDetail');
+                                    } else {
+                                        handleEnroll(course.course_id);
+                                    }
+                                }}
+                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors text-sm ${course.is_enrolled
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                    }`}
+                            >
+                                {course.is_enrolled ? 'Vào học' : 'Đăng ký học'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Recent Activities */}
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
                 <div className="space-y-3">
@@ -81,6 +184,7 @@ const HomeContent = ({ courses, assignments }) => {
                 </div>
             </div>
         </div>
-    )
-}
+    );
+};
+
 export default HomeContent;

@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, Flask, make_response
 from services.auth_service import generate_token, decode_token
 from utils.middleware import token_required, get_jwt_identity
 from marshmallow import ValidationError
-from models.user import User
+from models.user import User, UserCourse
 from schemas.user_schema import UserRegisterSchema
 from database import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -21,6 +21,7 @@ redis_client = FlaskRedis(app)
 
 bp = Blueprint('user', __name__)
 profile_bp = Blueprint('profile', __name__)
+course_user = Blueprint('course_user', __name__)
 
 @bp.route("/register", methods=["POST"])
 def register():
@@ -235,3 +236,42 @@ def change_password():
         "message": "Password changed successfully",
         "status" : 200
         })
+
+@course_user.route('/courses/<int:course_id>/enroll', methods=["POST"])
+@token_required(['student'])
+def enroll_course(course_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Kiểm tra xem người dùng đã đăng ký khóa học chưa
+    existing = UserCourse.query.filter_by(user_id=user_id, course_id=course_id).first()
+    if existing:
+        return jsonify({"message": "Already enrolled in this course."}), 200
+
+    # Thêm khóa học vào danh sách đăng ký của người dùng
+    enrollment = UserCourse(user_id=user_id, course_id=course_id, enrolled_at=datetime.datetime.utcnow())
+    db.session.add(enrollment)
+    db.session.commit()
+
+    return jsonify({"message": "Successfully enrolled in the course", "status" : 200}), 200
+
+
+@course_user.route('/courses/<int:course_id>/unenroll', methods=['DELETE'])
+@token_required(['student'])
+def unenroll_course(course_id):
+    user_id = get_jwt_identity()
+    
+
+    # Kiểm tra user đã đăng ký chưa
+    enrollment = UserCourse.query.filter_by(user_id=user_id, course_id=course_id).first()
+    if not enrollment:
+        return jsonify({"error": "You are not enrolled in this course."}), 404
+
+    # Xóa bản ghi đăng ký
+    db.session.delete(enrollment)
+    db.session.commit()
+
+    return jsonify({"message": "Unenrolled from course successfully.", "status" : 200}), 200

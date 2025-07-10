@@ -4,10 +4,14 @@ import {
     Send, Edit3, RotateCcw, Settings, Copy, Download,
     ChevronDown, ChevronRight, AlertCircle, CheckSquare
 } from 'lucide-react';
-import { assignments, codeExamples } from '../../data/student/assignment';
+import { getAssignmentsForStudentAPI, submitAssignmentAPI } from '../../../services/AssignmentService';
+import AssignmentService from "../../../services/AssignmentService";
+import { runCodeJudge0 } from "../../../services/Judge0Service";
+import { fetchCodeCompletion } from "../../../services/CodeCompletionService";
 
-const AssignmentContent = () => {
+const AssignmentContent = ({ courseId }) => {
     const [activeTab, setActiveTab] = useState('assignments');
+    const [assignments, setAssignments] = useState([]);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [codeLanguage, setCodeLanguage] = useState('python');
     const [code, setCode] = useState('');
@@ -17,6 +21,28 @@ const AssignmentContent = () => {
     const [uploadedFile, setUploadedFile] = useState(null);
     const [savedDrafts, setSavedDrafts] = useState({});
     const codeEditorRef = useRef(null);
+    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'submitted', 'pending'
+    const [completion, setCompletion] = useState("");
+
+    useEffect(() => {
+        console.log("courseId:", courseId);
+        if (courseId) {
+            getAssignmentsForStudentAPI(courseId)
+                .then(res => setAssignments(res.data.data || []))
+                .catch(() => setAssignments([]));
+        }
+    }, [courseId]);
+
+    useEffect(() => {
+        AssignmentService.getMyAssignments()
+            .then(res => {
+                console.log("API assignments response:", res.assignment);
+                if (res && res.assignments) {
+                    setAssignments(res.assignments);
+                }
+            })
+            .catch(() => { });
+    }, []);
 
     useEffect(() => {
         if (selectedAssignment && selectedAssignment.type === 'code') {
@@ -28,58 +54,19 @@ const AssignmentContent = () => {
     const runCode = async () => {
         setIsRunning(true);
         setOutput('Đang chạy...');
-
-        // Simulate code execution
-        setTimeout(() => {
-            try {
-                if (codeLanguage === 'python') {
-                    // Simulate Python execution
-                    if (code.includes('print(')) {
-                        const matches = code.match(/print\((.*?)\)/g);
-                        if (matches) {
-                            const outputs = matches.map(match => {
-                                const content = match.match(/print\((.*?)\)/)[1];
-                                // Basic string evaluation
-                                if (content.includes('f"') || content.includes("f'")) {
-                                    return content.replace(/f["']/, '').replace(/["']/g, '').replace(/\{.*?\}/g, 'value');
-                                }
-                                return content.replace(/["']/g, '');
-                            });
-                            setOutput(outputs.join('\n'));
-                        } else {
-                            setOutput('Không có output');
-                        }
-                    } else {
-                        setOutput('Chương trình chạy thành công (không có output)');
-                    }
-                } else if (codeLanguage === 'perl') {
-                    // Simulate Perl execution
-                    if (code.includes('print')) {
-                        const matches = code.match(/print ".*?";/g);
-                        if (matches) {
-                            const outputs = matches.map(match =>
-                                match.replace(/print "/, '').replace(/";/, '').replace(/\\n/, '')
-                            );
-                            setOutput(outputs.join('\n'));
-                        } else {
-                            setOutput('Không có output');
-                        }
-                    } else {
-                        setOutput('Chương trình chạy thành công (không có output)');
-                    }
-                }
-            } catch (error) {
-                setOutput(`Lỗi: ${error.message}`);
+        try {
+            const result = await runCodeJudge0(code, codeLanguage);
+            if (result.stderr) {
+                setOutput(result.stderr);
+            } else if (result.compile_output) {
+                setOutput(result.compile_output);
+            } else {
+                setOutput(result.stdout || "Không có output");
             }
-            setIsRunning(false);
-        }, 1500);
-    };
-
-    const loadExample = (exampleName) => {
-        const example = codeExamples[codeLanguage][exampleName];
-        if (example) {
-            setCode(example);
+        } catch (error) {
+            setOutput("Lỗi khi chạy code: " + (error.message || "Không xác định"));
         }
+        setIsRunning(false);
     };
 
     const saveDraft = () => {
@@ -99,8 +86,26 @@ const AssignmentContent = () => {
 
     const submitAssignment = () => {
         if (selectedAssignment) {
-            // Simulate submission
-            alert(`Đã nộp bài: ${selectedAssignment.title}`);
+            let data = {};
+            if (selectedAssignment.type === 'code') data.code = code;
+            if (selectedAssignment.type === 'upload') data.file_url = uploadedFile;
+            if (selectedAssignment.type === 'quiz') data.quiz_answers = selectedAnswers;
+            submitAssignmentAPI(selectedAssignment.assignment_id, data)
+                .then(() => {
+                    alert('Nộp bài thành công!');
+                    // Cập nhật trạng thái assignment trong danh sách
+                    setAssignments(prev =>
+                        prev.map(a =>
+                            a.assignment_id === selectedAssignment.assignment_id
+                                ? { ...a, status: 'submitted' }
+                                : a
+                        )
+                    );
+                    // Cập nhật selectedAssignment
+                    setSelectedAssignment(prev =>
+                        prev ? { ...prev, status: 'submitted' } : prev
+                    );
+                });
         }
     };
 
@@ -200,20 +205,6 @@ const AssignmentContent = () => {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    {/* Examples Dropdown */}
-                                    <div className="relative">
-                                        <select
-                                            onChange={(e) => e.target.value && loadExample(e.target.value)}
-                                            className="border border-gray-300 rounded px-3 py-1 text-sm"
-                                            defaultValue=""
-                                        >
-                                            <option value="">Chọn ví dụ mẫu</option>
-                                            {Object.keys(codeExamples[codeLanguage]).map(example => (
-                                                <option key={example} value={example}>{example}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
                                     <button
                                         onClick={runCode}
                                         disabled={isRunning}
@@ -226,14 +217,34 @@ const AssignmentContent = () => {
                             </div>
 
                             <div className="p-0">
-                                <textarea
-                                    ref={codeEditorRef}
-                                    value={code}
-                                    onChange={(e) => setCode(e.target.value)}
-                                    className="w-full h-64 p-4 font-mono text-sm border-none resize-none focus:outline-none bg-gray-900 text-green-400"
-                                    placeholder={`Viết code ${codeLanguage} của bạn ở đây...`}
-                                    spellCheck={false}
-                                />
+                                <div className="relative w-full h-64">
+                                    {/* Overlay code + completion */}
+                                    <pre
+                                        className="absolute top-0 left-0 w-full h-full pointer-events-none p-4 font-mono text-sm whitespace-pre-wrap bg-transparent"
+                                        style={{ color: "#22c55e" }}
+                                    >
+                                        {code}
+                                        <span style={{ color: "#a3a3a3" }}>{completion}</span>
+                                    </pre>
+                                    {/* Textarea thật */}
+                                    <textarea
+                                        ref={codeEditorRef}
+                                        value={code}
+                                        onChange={e => setCode(e.target.value)}
+                                        className="absolute top-0 left-0 w-full h-full p-4 font-mono text-sm border-none resize-none focus:outline-none bg-transparent text-green-400"
+                                        placeholder={`Viết code ${codeLanguage} của bạn ở đây...`}
+                                        spellCheck={false}
+                                        onKeyDown={handleKeyDown}
+                                        style={{ background: "transparent", color: "transparent", caretColor: "#22c55e" }}
+                                    />
+                                </div>
+                                {completion && (
+                                    <div className="text-gray-400 font-mono text-sm mt-1">
+                                        <span>Gợi ý: </span>
+
+                                        <span className="text-xs text-blue-500 ml-2">(Nhấn Tab để chèn)</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -258,7 +269,7 @@ const AssignmentContent = () => {
                     </div>
                 )}
 
-                {selectedAssignment.type === 'quiz' && (
+                {selectedAssignment.type === 'quiz' && Array.isArray(selectedAssignment.questions) && (
                     <div className="space-y-6">
                         {selectedAssignment.questions.map((question) => (
                             <div key={question.id} className="bg-white border border-gray-200 rounded-lg p-6">
@@ -346,7 +357,10 @@ const AssignmentContent = () => {
                     </button>
 
                     {selectedAssignment.status === 'submitted' && (
-                        <button className="flex items-center gap-2 bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700">
+                        <button
+                            className="flex items-center gap-2 bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700"
+                            onClick={submitAssignment}
+                        >
                             <RotateCcw className="w-4 h-4" />
                             Nộp lại
                         </button>
@@ -362,10 +376,37 @@ const AssignmentContent = () => {
         );
     };
 
+    // Hàm gọi API lấy gợi ý code
+    const triggerCompletion = async () => {
+        if (code.trim()) {
+            const suggestion = await fetchCodeCompletion(code);
+            setCompletion(suggestion);
+        }
+    };
+
+    // Sự kiện keydown
+    const handleKeyDown = (e) => {
+        // Ctrl + Space: gọi gợi ý code
+        if (e.ctrlKey && e.code === "Space") {
+            e.preventDefault();
+            triggerCompletion();
+        }
+        // Tab: chèn gợi ý
+        else if (e.key === "Tab" && completion) {
+            e.preventDefault();
+            setCode(code + completion);
+            setCompletion("");
+        }
+        // Esc: ẩn gợi ý
+        else if (e.key === "Escape" && completion) {
+            setCompletion("");
+        }
+    };
+
     return (
         <div className="flex h-screen bg-gray-50">
             {/* Sidebar */}
-            <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+            <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto">
                 <div className="p-4 border-b border-gray-200">
                     <h2 className="text-xl font-bold text-gray-800">Bài tập & Thực hành</h2>
                 </div>
@@ -394,40 +435,70 @@ const AssignmentContent = () => {
                     </div>
                 </div>
 
+                {/* Filter Buttons */}
+                <div className="flex gap-2 p-4">
+                    <button
+                        className={`px-3 py-1 rounded ${filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => setFilterStatus('all')}
+                    >
+                        Tất cả
+                    </button>
+                    <button
+                        className={`px-3 py-1 rounded ${filterStatus === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => setFilterStatus('pending')}
+                    >
+                        Chưa nộp
+                    </button>
+                    <button
+                        className={`px-3 py-1 rounded ${filterStatus === 'submitted' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => setFilterStatus('submitted')}
+                    >
+                        Đã nộp
+                    </button>
+                </div>
+
                 {/* Assignment List */}
                 {activeTab === 'assignments' && (
                     <div className="p-4 space-y-3">
-                        {assignments.map((assignment) => (
-                            <div
-                                key={assignment.id}
-                                onClick={() => setSelectedAssignment(assignment)}
-                                className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedAssignment?.id === assignment.id
-                                    ? 'bg-blue-50 border-blue-300'
-                                    : 'bg-white border-gray-200 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <div className="flex items-start justify-between mb-2">
-                                    <h3 className="font-medium text-gray-900 text-sm">{assignment.title}</h3>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(assignment.status)}`}>
-                                        {assignment.status === 'submitted' ? 'Đã nộp' : 'Chưa nộp'}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center gap-4 text-xs text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        {assignment.dueDate}
+                        {assignments
+                            .filter(a => filterStatus === 'all' || a.status === filterStatus)
+                            .map((assignment) => (
+                                <div
+                                    key={assignment.assignment_id}
+                                    onClick={() => setSelectedAssignment(assignment)}
+                                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedAssignment?.assignment_id === assignment.assignment_id
+                                        ? 'bg-blue-50 border-blue-300'
+                                        : assignment.status === 'submitted'
+                                            ? 'bg-green-50 border-green-300 opacity-70'
+                                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h3 className="font-medium text-gray-900 text-sm">
+                                            {assignment.title}
+                                            {assignment.status === 'submitted' && (
+                                                <span className="ml-2 text-green-600" title="Đã nộp">✅</span>
+                                            )}
+                                        </h3>
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(assignment.status)}`}>
+                                            {assignment.status === 'submitted' ? 'Đã nộp' : 'Chưa nộp'}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        {assignment.type === 'code' ? <Code className="w-3 h-3" /> :
-                                            assignment.type === 'quiz' ? <CheckSquare className="w-3 h-3" /> :
-                                                <Upload className="w-3 h-3" />}
-                                        {assignment.type === 'code' ? 'Code' :
-                                            assignment.type === 'quiz' ? 'Quiz' : 'Upload'}
+                                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {assignment.due_date}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {assignment.type === 'code' ? <Code className="w-3 h-3" /> :
+                                                assignment.type === 'quiz' ? <CheckSquare className="w-3 h-3" /> :
+                                                    <Upload className="w-3 h-3" />}
+                                            {assignment.type === 'code' ? 'Code' :
+                                                assignment.type === 'quiz' ? 'Quiz' : 'Upload'}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 )}
 

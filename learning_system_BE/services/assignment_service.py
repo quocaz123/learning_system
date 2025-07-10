@@ -67,7 +67,8 @@ def create_assignment(data):
         due_date=datetime.strptime(data['due_date'], '%Y-%m-%d') if 'due_date' in data else None
     )
     db.session.add(assignment)
-    
+    db.session.commit()  # Commit để assignment_id được sinh ra
+
     # Xử lý code_tests nếu có
     if assignment.type in ['code', 'mixed'] and 'code_tests' in data:
         for test in data['code_tests']:
@@ -78,7 +79,7 @@ def create_assignment(data):
                 score_weight=test.get('score_weight', 1.0)
             )
             db.session.add(code_test)
-    
+
     # Xử lý quiz_questions nếu có
     if assignment.type in ['quiz', 'mixed'] and 'quiz_questions' in data:
         for question in data['quiz_questions']:
@@ -90,7 +91,7 @@ def create_assignment(data):
                 score_weight=question.get('score_weight', 1.0)
             )
             db.session.add(quiz_question)
-    
+
     db.session.commit()
     return assignment
 
