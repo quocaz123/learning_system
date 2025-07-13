@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import {
     BookOpen,
     Users,
@@ -5,15 +6,54 @@ import {
     PlusCircle,
     CheckCircle,
 } from 'lucide-react';
-import { assignments, students } from '../../data/teacher/data_dashboard';
-const HomeContent = () => {
+import { getStatsAPI, getLogsAPI, getRecentSubmissionsAPI } from '../../../services/Teacher_Dashboard';
 
-    const stats = {
-        totalCourses: 3,
-        totalStudents: 125,
-        totalAssignments: 24,
-        avgCompletion: 85
-    };
+const HomeContent = () => {
+    const [stats, setStats] = useState({
+        totalCourses: 0,
+        totalStudents: 0,
+        totalAssignments: 0,
+        avgCompletion: 0
+    });
+    const [studentLogs, setStudentLogs] = useState([]);
+    const [recentSubmissions, setRecentSubmissions] = useState([]);
+    const [showAllSubmissions, setShowAllSubmissions] = useState(false);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            const res = await getStatsAPI();
+            if (res && res.data) {
+                setStats({
+                    totalCourses: res.data.total_courses,
+                    totalStudents: res.data.total_students,
+                    totalAssignments: res.data.total_assignments,
+                    avgCompletion: res.data.avg_completion
+                });
+            }
+        };
+        fetchStats();
+    }, []);
+
+    useEffect(() => {
+        const fetchLogs = async () => {
+            const res = await getLogsAPI();
+            console.log(res.data)
+            if (res && res.data) {
+                setStudentLogs(res.data);
+            }
+        };
+        fetchLogs();
+    }, []);
+
+    useEffect(() => {
+        const fetchRecentSubmissions = async () => {
+            const res = await getRecentSubmissionsAPI();
+            if (res && res.data) {
+                setRecentSubmissions(res.data);
+            }
+        };
+        fetchRecentSubmissions();
+    }, []);
 
     const StatCard = ({ title, value, icon: Icon, color }) => (
         <div className="bg-white rounded-lg shadow p-6">
@@ -23,11 +63,11 @@ const HomeContent = () => {
                     <p className="text-2xl font-bold text-gray-900">{value}</p>
                 </div>
                 <div className={`p-3 rounded-full ${color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                    color === 'green' ? 'bg-green-100 text-green-600' :
-                        color === 'purple' ? 'bg-purple-100 text-purple-600' :
-                            'bg-orange-100 text-orange-600'
+                        color === 'green' ? 'bg-green-100 text-green-600' :
+                            color === 'purple' ? 'bg-purple-100 text-purple-600' :
+                                'bg-orange-100 text-orange-600'
                     }`}>
-                    <Icon size={24} />
+                    {Icon && <Icon size={24} />}
                 </div>
             </div>
         </div>
@@ -56,43 +96,89 @@ const HomeContent = () => {
                 <div className="bg-white rounded-lg shadow p-6">
                     <h3 className="text-lg font-semibold mb-4">Bài nộp gần đây</h3>
                     <div className="space-y-3">
-                        {assignments.slice(0, 3).map(assignment => (
-                            <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium">{assignment.title}</p>
-                                    <p className="text-sm text-gray-600">{assignment.course}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-medium">{assignment.submissions}/{assignment.total}</p>
-                                    <p className="text-xs text-gray-500">Hạn: {assignment.dueDate}</p>
+                        {(recentSubmissions.length === 0) ? (
+                            <p className="text-gray-500 text-sm">Chưa có bài nộp nào.</p>
+                        ) : (
+                            <>
+                                {recentSubmissions.slice(0, 3).map((item, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div>
+                                            <p className="font-medium">{item.assignment_title}</p>
+                                            <p className="text-sm text-gray-600">{item.course_title}</p>
+                                            <p className="text-xs text-gray-500">Mã SV: {item.student_id}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-gray-500">Nộp: {item.submitted_at ? new Date(item.submitted_at).toLocaleString() : ''}</p>
+                                            <p className="text-xs text-gray-400">Hạn: {item.due_date ? new Date(item.due_date).toLocaleDateString() : ''}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {recentSubmissions.length > 3 && (
+                                    <button
+                                        className="mt-2 text-blue-600 hover:underline text-sm"
+                                        onClick={() => setShowAllSubmissions(true)}
+                                    >
+                                        Xem thêm
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Popup/drawer overlay */}
+                    {showAllSubmissions && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 relative">
+                                <button
+                                    className="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                                    onClick={() => setShowAllSubmissions(false)}
+                                >
+                                    Đóng
+                                </button>
+                                <h3 className="text-lg font-semibold mb-4">Tất cả bài nộp gần đây</h3>
+                                <div className="space-y-3">
+                                    {recentSubmissions.map((item, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                            <div>
+                                                <p className="font-medium">{item.assignment_title}</p>
+                                                <p className="text-sm text-gray-600">{item.course_title}</p>
+                                                <p className="text-xs text-gray-500">Mã SV: {item.student_id}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-gray-500">Nộp: {item.submitted_at ? new Date(item.submitted_at).toLocaleString() : ''}</p>
+                                                <p className="text-xs text-gray-400">Hạn: {item.due_date ? new Date(item.due_date).toLocaleDateString() : ''}</p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-semibold mb-4">Sinh viên xuất sắc</h3>
-                    <div className="space-y-3">
-                        {students.slice(0, 3).map(student => (
-                            <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium">{student.name}</p>
-                                    <p className="text-sm text-gray-600">{student.course}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-medium">{student.progress}%</p>
-                                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${student.progress}%` }}></div>
+                    <h3 className="text-lg font-semibold mb-4">Hoạt động sinh viên</h3>
+                    <div className="space-y-3 max-h-72 overflow-y-auto">
+                        {studentLogs.length === 0 ? (
+                            <p className="text-gray-500 text-sm">Chưa có hoạt động nào.</p>
+                        ) : (
+                            studentLogs.map(log => (
+                                <div key={log.log_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p className="font-medium">User ID: {log.user_id}</p>
+                                        <p className="text-sm text-gray-600">{log.action_type}</p>
+                                        <p className="text-xs text-gray-500">{log.action_data && JSON.stringify(log.action_data)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-gray-400">{new Date(log.created_at).toLocaleString()}</p>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
         </div>
     )
-
 };
 
 export default HomeContent;

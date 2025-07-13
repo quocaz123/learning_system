@@ -10,73 +10,149 @@ import {
 } from 'lucide-react';
 import TopBar from '../components/Common/TopBar';
 import Sidebar from '../components/Common/Sidebar';
-import { sidebarItems, courses, assignments, students } from '../data/teacher/data_dashboard';
+import { sidebarItems, courses, assignments } from '../data/teacher/data_dashboard';
 import AssignmentCreate from '../components/Teacher/AssignmentCreate';
 import AssignmentList from '../components/Teacher/AssignmentList';
 import HomeContent from '../components/Teacher/HomeContent';
+import CourseCreator from '../components/Teacher/CourseCreator';
+import LessonCreator from '../components/Teacher/LessonCreator';
+import { getLessonsByCourseAPI } from '../../services/CourseService';
+import LessonList from '../components/Teacher/LessonList';
+import { getStudentsByCourseAPI } from '../../services/CourseService';
 
 const TeacherDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [showCoursesOpen, setShowCoursesOpen] = useState(false);
+    const [showLessonCreator, setShowLessonCreator] = useState(false);
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
+    const [lessons, setLessons] = useState([]);
+    const [showLessons, setShowLessons] = useState(false);
+    const [selectedStudentCourseId, setSelectedStudentCourseId] = useState(null);
+    const [studentsByCourse, setStudentsByCourse] = useState([]);
 
 
+    const handleViewLessons = async (courseId) => {
+        setSelectedCourseId(courseId);
+        try {
+            const res = await getLessonsByCourseAPI(courseId);
+            // Kiểm tra dữ liệu trả về
+            console.log(res.result)
+            const lessonsArr = res?.result || [];
+            setLessons(Array.isArray(lessonsArr) ? lessonsArr : []);
+            setShowLessons(true);
+        } catch {
+            setLessons([]);
+            setShowLessons(true);
+        }
+    };
+
+    const handleCloseLessons = () => {
+        setShowLessons(false);
+        setLessons([]);
+        setSelectedCourseId(null);
+    };
+
+    const handleViewStudents = async (courseId) => {
+        setSelectedStudentCourseId(courseId);
+        try {
+            const res = await getStudentsByCourseAPI(courseId);
+            console.log(res)
+            setStudentsByCourse(res.data.students || []);
+        } catch {
+            setStudentsByCourse([]);
+        }
+    };
 
     const CoursesTab = () => (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Quản lý khóa học</h2>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
-                    <PlusCircle size={20} className="mr-2" />
-                    Thêm khóa học
-                </button>
-            </div>
-            <div className="bg-white rounded-lg shadow">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khóa học</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bài giảng</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bài tập</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {courses.map(course => (
-                                <tr key={course.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{course.name}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.students}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.lessons}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.assignments}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${course.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                            {course.status === 'active' ? 'Hoạt động' : 'Bản nháp'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
-                                                <Eye size={16} />
-                                            </button>
-                                            <button className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded">
-                                                <Edit3 size={16} />
-                                            </button>
-                                            <button className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {/* Ẩn bảng khóa học khi showLessons */}
+            {(!showCoursesOpen && !showLessonCreator && !showLessons) ? (
+                <>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-gray-900">Quản lý khóa học</h2>
+                        <div className="flex gap-2">
+                            <button
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition-colors"
+                                onClick={() => setShowCoursesOpen(true)}
+                            >
+                                <PlusCircle size={20} className="mr-2" />
+                                Thêm khóa học
+                            </button>
+                            <button
+                                className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-700 transition-colors"
+                                onClick={() => setShowLessonCreator(true)}
+                            >
+                                <PlusCircle size={20} className="mr-2" />
+                                Tạo bài học
+                            </button>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khóa học</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bài giảng</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bài tập</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {courses.map(course => (
+                                        <tr key={course.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-gray-900">{course.name}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.students}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.lessons}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.assignments}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${course.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{course.status === 'active' ? 'Hoạt động' : 'Bản nháp'}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex space-x-2">
+                                                    <button onClick={() => handleViewLessons(course.course_id || course.id)} className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded">
+                                                        <Edit3 size={16} />
+                                                    </button>
+                                                    <button className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            ) : showCoursesOpen ? (
+                <CourseCreator onCancel={() => setShowCoursesOpen(false)} />
+            ) : showLessonCreator ? (
+                <LessonCreator onCancel={() => setShowLessonCreator(false)} />
+            ) : null}
+            {/* Hiển thị LessonList khi showLessons */}
+            {showLessons && !showLessonCreator && (
+                <LessonList
+                    lessons={lessons}
+                    selectedCourseName={selectedCourseId ? (courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.name || courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.title || '') : ''}
+                    onBack={handleCloseLessons}
+                    onCreateLesson={() => setShowLessonCreator(true)}
+                    searchTerm={''}
+                    setSearchTerm={() => { }}
+                    filterStatus={''}
+                    setFilterStatus={() => { }}
+                    getStatusColor={(status) => status === 'active' ? 'bg-green-500' : 'bg-gray-500'}
+                    getStatusText={(status) => status === 'active' ? 'Hoạt động' : 'Bản nháp'}
+                />
+            )}
         </div>
     );
 
@@ -123,44 +199,31 @@ const TeacherDashboard = () => {
                     </button>
                 </div>
             </div>
+            <div className="flex gap-2 mb-4">
+                {courses.map(course => (
+                    <button
+                        key={course.course_id || course.id}
+                        className={`px-4 py-2 rounded ${selectedStudentCourseId === (course.course_id || course.id) ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+                        onClick={() => handleViewStudents(course.course_id || course.id)}
+                    >
+                        {course.name || course.title}
+                    </button>
+                ))}
+            </div>
             <div className="bg-white rounded-lg shadow">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khóa học</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiến độ</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hoạt động cuối</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {students.map(student => (
-                                <tr key={student.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div>
-                                            <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                                            <div className="text-sm text-gray-500">{student.email}</div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.course}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                                <div className="bg-green-500 h-2 rounded-full" style={{ width: `${student.progress}%` }}></div>
-                                            </div>
-                                            <span className="text-sm text-gray-500">{student.progress}%</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.lastActive}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
-                                                <Eye size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
+                            {studentsByCourse.map(student => (
+                                <tr key={student.user_id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap">{student.full_name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">{student.email}</td>
                                 </tr>
                             ))}
                         </tbody>

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from utils.middleware import token_required, get_jwt_identity
 from models import User, Course, Lesson , UserCourse, LessonProgress
-from services.course_service import count_completed_lessons, get_all_courses_service, get_lesson_detail_service
+from services.course_service import count_completed_lessons, get_all_courses_service, get_lesson_detail_service, create_course_service, create_lesson_service
 from models import assignment
 import logging
 from models.log import Log
@@ -10,6 +10,57 @@ import datetime
 
 course_bp = Blueprint('course', __name__)
 lesson_bp = Blueprint('lesson', __name__)
+
+@course_bp.route('/create-course', methods=['POST'])
+@token_required()
+def create_course():
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "User not found"}), 404
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        title = data.get('title')
+        if not title or not title.strip():
+            return jsonify({"error": "Course title is required"}), 400
+        
+        description = data.get('description', '')
+        language = data.get('language', 'other')
+        
+        # Create course using service
+        result = create_course_service(
+            user_id=user_id,
+            title=title.strip(),
+            description=description.strip(),
+            language=language
+        )
+        
+        if result.get('success'):
+            # Log the action
+            log = Log(
+                user_id=user_id, 
+                action_type='course_created', 
+                action_data={'course_id': result.get('course_id'), 'title': title}
+            )
+            db.session.add(log)
+            db.session.commit()
+            
+            return jsonify({
+                "message": "Course created successfully",
+                "data": result.get('data'),
+                "status": 201
+            }), 201
+        else:
+            return jsonify({"error": result.get('error')}), 400
+            
+    except Exception as e:
+        logging.error(f"Error creating course: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 @course_bp.route('/courses', methods=['GET'])
 @token_required()
@@ -36,7 +87,8 @@ def get_course(course_id):
     for lesson in lessons:
         result.append({
             "lesson_id": lesson.lesson_id,
-            "title": lesson.title
+            "title": lesson.title,
+            "created_at": lesson.created_at.strftime('%Y-%m-%d %H:%M:%S') if lesson.created_at else None
         })
 
     return jsonify({"result": result, "status": 200}), 200
@@ -70,6 +122,22 @@ def get_my_courses():
 
     return jsonify({"data": result, "status": 200}), 200
 
+@course_bp.route('/courses/<int:course_id>/students', methods=['GET'])
+@token_required(['teacher', 'admin'])
+def get_students_in_course(course_id):
+    students = UserCourse.query.filter_by(course_id=course_id).all()
+    result = []
+    for s in students:
+        user = User.query.get(s.user_id)
+        if user and user.role == 'student':
+            profile = user.profile
+            result.append({
+                'user_id': user.user_id,
+                'full_name': profile.full_name if profile else '',
+                'email': user.email,
+            })
+    return jsonify({'students': result, 'status': 200}), 200
+
 @lesson_bp.route('/lessons/<int:lesson_id>', methods=['GET'])
 @token_required()
 def get_lesson_detail(lesson_id):
@@ -84,6 +152,43 @@ def get_all_courses():
     user_id = get_jwt_identity()
     results = get_all_courses_service(user_id)
     return jsonify({"data": results, "status": 200})
+
+@lesson_bp.route('/create-lesson', methods=['POST'])
+@token_required()
+def create_lesson():
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "User not found"}), 404
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        course_id = data.get('course_id')
+        title = data.get('title')
+        content_html = data.get('content_html', '')
+        code_blocks = data.get('code_blocks', [])
+        videos = data.get('videos', [])
+        attachments = data.get('attachments', [])
+        result = create_lesson_service(
+            user_id=user_id,
+            course_id=course_id,
+            title=title,
+            content_html=content_html,
+            code_blocks=code_blocks,
+            videos=videos,
+            attachments=attachments
+        )
+        if result.get('success'):
+            return jsonify({
+                "message": "Lesson created successfully",
+                "data": result.get('data'),
+                "status": 201
+            }), 201
+        else:
+            return jsonify({"error": result.get('error')}), 400
+    except Exception as e:
+        logging.error(f"Error creating lesson: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @lesson_bp.route('/lessons/complete', methods=['POST'])

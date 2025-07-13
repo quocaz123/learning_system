@@ -11,7 +11,9 @@ from flask_redis import FlaskRedis
 from dotenv import load_dotenv 
 import os
 import datetime
-from models import Profile
+from models import Profile, Course, UserCourse, User, Lesson, Assignment, LessonProgress
+from sqlalchemy import func, text
+from models.log import Log
 
 load_dotenv()
 
@@ -236,6 +238,122 @@ def change_password():
         "message": "Password changed successfully",
         "status" : 200
         })
+
+@bp.route('/teacher/dashboard-stats', methods=["GET"])
+@token_required(['teacher', 'admin'])
+def teacher_dashboard_stats():
+    user_id = get_jwt_identity()
+    # Tổng khóa học
+    courses = Course.query.filter_by(created_by=user_id).all()
+    course_ids = [c.course_id for c in courses]
+    total_courses = len(courses)
+
+    # Tổng sinh viên (unique)
+    student_ids = set()
+    for cid in course_ids:
+        students = UserCourse.query.filter_by(course_id=cid).all()
+        for s in students:
+            # Kiểm tra role là student
+            user = User.query.get(s.user_id)
+            if user and user.role == 'student':
+                student_ids.add(user.user_id)
+    total_students = len(student_ids)
+
+    # Tổng bài tập
+    lessons = Lesson.query.filter(Lesson.course_id.in_(course_ids)).all()
+    lesson_ids = [l.lesson_id for l in lessons]
+    total_assignments = Assignment.query.filter(Assignment.lesson_id.in_(lesson_ids)).count()
+
+    # Tỉ lệ hoàn thành trung bình
+    # Với mỗi student, đếm số lesson đã hoàn thành / tổng lesson
+    avg_completion = 0
+    if total_students > 0 and len(lesson_ids) > 0:
+        total_percent = 0
+        for sid in student_ids:
+            completed = LessonProgress.query.filter(
+                LessonProgress.user_id == sid,
+                LessonProgress.lesson_id.in_(lesson_ids),
+                LessonProgress.completed == True
+            ).count()
+            percent = completed / len(lesson_ids) * 100
+            total_percent += percent
+        avg_completion = round(total_percent / total_students)
+    
+    result = {
+        'total_courses': total_courses,
+        'total_students': total_students,
+        'total_assignments': total_assignments,
+        'avg_completion': avg_completion
+    }
+
+    return jsonify({"data" : result, "status" : 200}), 200
+
+@bp.route('/teacher/student-logs', methods=["GET"])
+@token_required(['teacher', 'admin'])
+def get_student_logs():
+    user_id = get_jwt_identity()
+    # Lấy các course do teacher tạo
+    courses = Course.query.filter_by(created_by=user_id).all()
+    course_ids = [c.course_id for c in courses]
+    # Lấy user_id của sinh viên thuộc các lớp này
+    student_ids = set()
+    for cid in course_ids:
+        students = UserCourse.query.filter_by(course_id=cid).all()
+        for s in students:
+            user = User.query.get(s.user_id)
+            if user and user.role == 'student':
+                student_ids.add(user.user_id)
+    # Lấy log của các sinh viên này
+    logs = Log.query.filter(Log.user_id.in_(student_ids)).order_by(Log.created_at.desc()).limit(30).all()
+    result = [
+        {
+            'log_id': log.log_id,
+            'user_id': log.user_id,
+            'action_type': log.action_type,
+            'action_data': log.action_data,
+            'created_at': log.created_at.isoformat()
+        }
+        for log in logs
+    ]
+    return jsonify({"data": result, "status": 200}), 200
+
+@bp.route('/teacher/recent-submissions', methods=["GET"])
+@token_required(['teacher', 'admin'])
+def get_recent_submissions():
+    user_id = get_jwt_identity()
+    # Lấy các course do teacher tạo
+    courses = Course.query.filter_by(created_by=user_id).all()
+    course_ids = [c.course_id for c in courses]
+    # Lấy lesson_id thuộc các course này
+    lessons = Lesson.query.filter(Lesson.course_id.in_(course_ids)).all()
+    lesson_ids = [l.lesson_id for l in lessons]
+    # Lấy assignment_id thuộc các lesson này
+    assignments = Assignment.query.filter(Assignment.lesson_id.in_(lesson_ids)).all()
+    assignment_ids = [a.assignment_id for a in assignments]
+    # Lấy các bài nộp gần đây của sinh viên cho các assignment này
+    submissions = db.session.execute(
+        text('''
+        SELECT s.submission_id, s.assignment_id, s.user_id, s.submitted_at, a.title as assignment_title, a.due_date, l.course_id, c.title as course_title
+        FROM submissions s
+        JOIN assignments a ON s.assignment_id = a.assignment_id
+        JOIN lessons l ON a.lesson_id = l.lesson_id
+        JOIN courses c ON l.course_id = c.course_id
+        WHERE s.assignment_id IN :assignment_ids
+        ORDER BY s.submitted_at DESC
+        LIMIT 10
+        '''), {"assignment_ids": tuple(assignment_ids) if assignment_ids else (0,)}
+    ).fetchall()
+    result = [
+        {
+            "assignment_title": row.assignment_title,
+            "course_title": row.course_title,
+            "due_date": row.due_date.isoformat() if row.due_date else None,
+            "student_id": row.user_id,
+            "submitted_at": row.submitted_at.isoformat() if row.submitted_at else None
+        }
+        for row in submissions
+    ]
+    return jsonify({"data": result, "status": 200}), 200
 
 @course_user.route('/courses/<int:course_id>/enroll', methods=["POST"])
 @token_required(['student'])

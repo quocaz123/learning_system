@@ -5,6 +5,11 @@ const authHeader = () => {
     return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+export const createCourseAPI = (courseData) =>
+    axios.post("/create-course", courseData, {
+        headers: authHeader(),
+    });
+
 export const getAllCoursesAPI = () =>
     axios.get("/all_courses", {
         headers: authHeader(),
@@ -31,5 +36,15 @@ export const completeLessonAPI = (userId, lessonId, courseId) =>
         lesson_id: lessonId,
         course_id: courseId,
     }, {
+        headers: authHeader(),
+    });
+
+export const getLessonsByCourseAPI = (courseId) =>
+    axios.get(`/courses/${courseId}`, {
+        headers: authHeader(),
+    });
+
+export const getStudentsByCourseAPI = (courseId) =>
+    axios.get(`/courses/${courseId}/students`, {
         headers: authHeader(),
     });
