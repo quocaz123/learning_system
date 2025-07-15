@@ -44,6 +44,18 @@ export const submitAssignmentAPI = (assignmentId, data) =>
         headers: authHeader(),
     });
 
+// Lấy toàn bộ testcase của một assignment
+export const getAssignmentTestcasesAPI = (assignmentId) =>
+    axios.get(`/assignments/${assignmentId}/testcases`, {
+        headers: authHeader(),
+    });
+
+// Gửi code để test run với toàn bộ testcase (backend tự lấy testcase)
+export const testRunAssignmentAPI = (assignmentId, code) =>
+    axios.post(`/assignments/${assignmentId}/test-run`, { code }, {
+        headers: authHeader(),
+    });
+
 const getMyAssignments = () => axios.get('/my-assignments');
 const getRecentLogs = () => axios.get('/logs/recent', { headers: authHeader() });
 const getStatusAssignment = () => axios.get('/my-assignments/statistics', { headers: authHeader() });

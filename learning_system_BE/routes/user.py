@@ -25,6 +25,8 @@ bp = Blueprint('user', __name__)
 profile_bp = Blueprint('profile', __name__)
 course_user = Blueprint('course_user', __name__)
 
+ALLOWED_ROLES = ['student', 'teacher']
+
 @bp.route("/register", methods=["POST"])
 def register():
     try:
@@ -38,11 +40,16 @@ def register_user(data):
     if User.query.filter_by(email=data["email"]).first():
         return {"message": "Email đã tồn tại"}, 400
 
+    # Kiểm tra role
+    role = data.get("role", "student")
+    if role not in ALLOWED_ROLES:
+        return {"message": "Vai trò không khả dụng."}, 400
+
     # Tạo user mới
     user = User(
         email=data["email"],
         password_hash=generate_password_hash(data["password"]),
-        role=data.get("role", "student")
+        role=role
     )
     db.session.add(user)
     db.session.commit()  # Để user_id được sinh ra
@@ -240,7 +247,7 @@ def change_password():
         })
 
 @bp.route('/teacher/dashboard-stats', methods=["GET"])
-@token_required(['teacher', 'admin'])
+@token_required(['teacher', 'assistant'])
 def teacher_dashboard_stats():
     user_id = get_jwt_identity()
     # Tổng khóa học
@@ -289,7 +296,7 @@ def teacher_dashboard_stats():
     return jsonify({"data" : result, "status" : 200}), 200
 
 @bp.route('/teacher/student-logs', methods=["GET"])
-@token_required(['teacher', 'admin'])
+@token_required(['teacher', 'assistant'])
 def get_student_logs():
     user_id = get_jwt_identity()
     # Lấy các course do teacher tạo
@@ -318,7 +325,7 @@ def get_student_logs():
     return jsonify({"data": result, "status": 200}), 200
 
 @bp.route('/teacher/recent-submissions', methods=["GET"])
-@token_required(['teacher', 'admin'])
+@token_required(['teacher', 'assistant'])
 def get_recent_submissions():
     user_id = get_jwt_identity()
     # Lấy các course do teacher tạo

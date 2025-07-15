@@ -123,7 +123,7 @@ def get_my_courses():
     return jsonify({"data": result, "status": 200}), 200
 
 @course_bp.route('/courses/<int:course_id>/students', methods=['GET'])
-@token_required(['teacher', 'admin'])
+@token_required(['teacher', 'assistant'])
 def get_students_in_course(course_id):
     students = UserCourse.query.filter_by(course_id=course_id).all()
     result = []

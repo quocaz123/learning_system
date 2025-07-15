@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     PlusCircle,
     Edit3,
@@ -19,6 +19,8 @@ import LessonCreator from '../components/Teacher/LessonCreator';
 import { getLessonsByCourseAPI } from '../../services/CourseService';
 import LessonList from '../components/Teacher/LessonList';
 import { getStudentsByCourseAPI } from '../../services/CourseService';
+import LessonDetail from '../components/Teacher/LessonDetail';
+import { getName } from "../../services/AuthService";
 
 const TeacherDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -30,6 +32,19 @@ const TeacherDashboard = () => {
     const [showLessons, setShowLessons] = useState(false);
     const [selectedStudentCourseId, setSelectedStudentCourseId] = useState(null);
     const [studentsByCourse, setStudentsByCourse] = useState([]);
+    const [selectedLessonId, setSelectedLessonId] = useState(null);
+    const [showLessonDetail, setShowLessonDetail] = useState(false);
+
+    const [inFor, setInFor] = useState('');
+    const [role, setRole] = useState('');
+        
+            useEffect(() => {
+                const userInfo = getName();
+                if (userInfo) {
+                    setInFor(userInfo.fullName || '');
+                    setRole(userInfo.role || 'Student');
+                }
+            }, []);
 
 
     const handleViewLessons = async (courseId) => {
@@ -37,7 +52,6 @@ const TeacherDashboard = () => {
         try {
             const res = await getLessonsByCourseAPI(courseId);
             // Kiểm tra dữ liệu trả về
-            console.log(res.result)
             const lessonsArr = res?.result || [];
             setLessons(Array.isArray(lessonsArr) ? lessonsArr : []);
             setShowLessons(true);
@@ -62,6 +76,15 @@ const TeacherDashboard = () => {
         } catch {
             setStudentsByCourse([]);
         }
+    };
+
+    const handleViewLesson = (lessonId) => {
+        setSelectedLessonId(lessonId);
+        setShowLessonDetail(true);
+    };
+    const handleCloseLessonDetail = () => {
+        setShowLessonDetail(false);
+        setSelectedLessonId(null);
     };
 
     const CoursesTab = () => (
@@ -139,7 +162,7 @@ const TeacherDashboard = () => {
                 <LessonCreator onCancel={() => setShowLessonCreator(false)} />
             ) : null}
             {/* Hiển thị LessonList khi showLessons */}
-            {showLessons && !showLessonCreator && (
+            {showLessons && !showLessonCreator && !showLessonDetail && (
                 <LessonList
                     lessons={lessons}
                     selectedCourseName={selectedCourseId ? (courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.name || courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.title || '') : ''}
@@ -151,7 +174,11 @@ const TeacherDashboard = () => {
                     setFilterStatus={() => { }}
                     getStatusColor={(status) => status === 'active' ? 'bg-green-500' : 'bg-gray-500'}
                     getStatusText={(status) => status === 'active' ? 'Hoạt động' : 'Bản nháp'}
+                    onViewLesson={handleViewLesson}
                 />
+            )}
+            {showLessonDetail && (
+                <LessonDetail lessonId={selectedLessonId} onClose={handleCloseLessonDetail} />
             )}
         </div>
     );
@@ -279,6 +306,8 @@ const TeacherDashboard = () => {
                 <TopBar
                     title={getPageTitle()}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+                    inFor={inFor}
+                    role={role}
                     rightContent={
                         <button className="p-2 rounded-full hover:bg-gray-100 relative">
                             <Bell size={20} />

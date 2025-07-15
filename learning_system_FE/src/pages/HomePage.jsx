@@ -13,13 +13,13 @@ const HomePage = () => {
     const [activeMenu, setActiveMenu] = useState('home');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState(null);
-    const [studentName, setStudentName] = useState('');
+    const [inFor, setInFor] = useState('');
     const [role, setRole] = useState('');
 
     useEffect(() => {
         const userInfo = getName();
         if (userInfo) {
-            setStudentName(userInfo.fullName || '');
+            setInFor(userInfo.fullName || '');
             setRole(userInfo.role || 'Student');
         }
     }, []);
@@ -35,11 +35,11 @@ const HomePage = () => {
         switch (activeMenu) {
             case 'home':
                 return <HomeContent
-                    studentName={studentName}
+                    inFor={inFor}
                     setSelectedCourse={setSelectedCourse}
                     setActiveMenu={setActiveMenu}
                     enrollCourse={enrollCourse}
-                    setStudentName={setStudentName}
+                    setInFor={inFor}
                 />;
             case 'courses':
                 return <CoursesContent selectedCourse={selectedCourse} />
@@ -71,7 +71,7 @@ const HomePage = () => {
                 <TopBar
                     title={activeMenu === 'home' ? 'DASHBOARD' : menuItems.find(item => item.id === activeMenu)?.label?.toUpperCase()}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-                    studentName={studentName}
+                    inFor={inFor}
                     role={role}
                     rightContent={
                         <button className="p-2 rounded-lg hover:bg-gray-100 relative">

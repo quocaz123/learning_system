@@ -5,7 +5,7 @@ import re
 
 lmstudio_bp = Blueprint('lmstudio', __name__)
 
-GEMINI_API_KEY = "AIzaSyCuGxALveKKIqQHdJ2nWE6U2ycXv7m_UVk"  # Hoặc lấy từ biến môi trường
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Hoặc lấy từ biến môi trường
 
 @lmstudio_bp.route('/lmstudio/completion', methods=['POST'])
 def code_completion():
@@ -15,7 +15,7 @@ def code_completion():
         "Hãy hoàn thành đoạn code sau, chỉ trả về code, không giải thích, không bình luận, không thêm chú thích, không markdown:\n"
         + code
     )
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+    url = os.getenv("URL_GEMINi_API") 
     headers = {
         "Content-Type": "application/json",
         "X-goog-api-key": GEMINI_API_KEY

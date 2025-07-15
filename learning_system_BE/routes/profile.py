@@ -59,7 +59,7 @@ def update_profile():
     
 
 @profile_bp.route('/profile', methods=['GET'])
-@token_required(allowed_roles=["student", "teacher"])
+@token_required(allowed_roles=["student", "teacher", "assistant"])
 def get_profile():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)

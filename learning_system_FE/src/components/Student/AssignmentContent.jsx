@@ -4,10 +4,12 @@ import {
     Send, Edit3, RotateCcw, Settings, Copy, Download,
     ChevronDown, ChevronRight, AlertCircle, CheckSquare
 } from 'lucide-react';
-import { getAssignmentsForStudentAPI, submitAssignmentAPI } from '../../../services/AssignmentService';
+import { getAssignmentsForStudentAPI, submitAssignmentAPI, testRunAssignmentAPI } from '../../../services/AssignmentService';
 import AssignmentService from "../../../services/AssignmentService";
+// import { runCodeJudge0 } from "../../../services/Judge0Service"; // Đã bỏ, không dùng
 import { runCodeJudge0 } from "../../../services/Judge0Service";
 import { fetchCodeCompletion } from "../../../services/CodeCompletionService";
+import { uploadFileAPI } from '../../../services/FileUploadService';
 
 const AssignmentContent = ({ courseId }) => {
     const [activeTab, setActiveTab] = useState('assignments');
@@ -15,14 +17,21 @@ const AssignmentContent = ({ courseId }) => {
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [codeLanguage, setCodeLanguage] = useState('python');
     const [code, setCode] = useState('');
+    // const [output, setOutput] = useState(''); // Đã bỏ, không dùng
     const [output, setOutput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [uploadedFile, setUploadedFile] = useState(null);
+    const [fileUrl, setFileUrl] = useState(null);
+    const [uploading, setUploading] = useState(false);
     const [savedDrafts, setSavedDrafts] = useState({});
     const codeEditorRef = useRef(null);
     const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'submitted', 'pending'
     const [completion, setCompletion] = useState("");
+    // const [testcases, setTestcases] = useState([]); // Đã bỏ, không dùng
+    const [testResults, setTestResults] = useState([]);
+    const [score, setScore] = useState(null);
+    const [maxScore, setMaxScore] = useState(null);
 
     useEffect(() => {
         console.log("courseId:", courseId);
@@ -51,7 +60,32 @@ const AssignmentContent = ({ courseId }) => {
         }
     }, [selectedAssignment]);
 
-    const runCode = async () => {
+    // Lấy testcase khi chọn assignment code (không cần setTestcases)
+    useEffect(() => {
+        if (!(selectedAssignment && selectedAssignment.type === 'code')) {
+            setTestResults([]);
+        }
+    }, [selectedAssignment]);
+
+    // Đã bỏ hàm runCode, dùng handleTestRunAll thay thế
+
+    // Hàm test run code với toàn bộ testcase
+    const handleTestRunAll = async () => {
+        setIsRunning(true);
+        setTestResults([]);
+        try {
+            const res = await testRunAssignmentAPI(selectedAssignment.assignment_id, code);
+            console.log(res)
+            setTestResults(res || []);
+        } catch (error) {
+            setTestResults([]);
+            alert('Lỗi khi test run: ' + (error?.response?.data?.error || error.message));
+        }
+        setIsRunning(false);
+    };
+
+    // Hàm chạy code bình thường (không testcase)
+    const handleRunCodeNormal = async () => {
         setIsRunning(true);
         setOutput('Đang chạy...');
         try {
@@ -87,11 +121,12 @@ const AssignmentContent = ({ courseId }) => {
     const submitAssignment = () => {
         if (selectedAssignment) {
             let data = {};
+            if (selectedAssignment.type === 'upload') data.file_url = fileUrl;
             if (selectedAssignment.type === 'code') data.code = code;
-            if (selectedAssignment.type === 'upload') data.file_url = uploadedFile;
             if (selectedAssignment.type === 'quiz') data.quiz_answers = selectedAnswers;
             submitAssignmentAPI(selectedAssignment.assignment_id, data)
-                .then(() => {
+                .then((res) => {
+                    console.log('Kết quả nộp bài:', res);
                     alert('Nộp bài thành công!');
                     // Cập nhật trạng thái assignment trong danh sách
                     setAssignments(prev =>
@@ -105,6 +140,11 @@ const AssignmentContent = ({ courseId }) => {
                     setSelectedAssignment(prev =>
                         prev ? { ...prev, status: 'submitted' } : prev
                     );
+                    // Hiển thị điểm nếu có
+                    if (res && typeof res.score !== 'undefined') {
+                        setScore(res.score);
+                        setMaxScore(res.max_score);
+                    }
                 });
         }
     };
@@ -112,14 +152,23 @@ const AssignmentContent = ({ courseId }) => {
     const handleQuizAnswer = (questionId, answerIndex) => {
         setSelectedAnswers(prev => ({
             ...prev,
-            [questionId]: answerIndex
+            [questionId]: answerIndex // answerIndex đã là index+1
         }));
     };
 
-    const handleFileUpload = (event) => {
+    const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (file) {
+            setUploading(true);
             setUploadedFile(file);
+            try {
+                const res = await uploadFileAPI(file);
+                setFileUrl(res.file_url);
+            } catch {
+                alert('Lỗi upload file!');
+                setFileUrl(null);
+            }
+            setUploading(false);
         }
     };
 
@@ -206,12 +255,20 @@ const AssignmentContent = ({ courseId }) => {
 
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={runCode}
+                                        onClick={handleTestRunAll}
                                         disabled={isRunning}
                                         className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
                                     >
                                         <Play className="w-4 h-4" />
-                                        {isRunning ? 'Đang chạy...' : 'Chạy thử'}
+                                        {isRunning ? 'Đang chạy...' : 'Test Run toàn bộ testcase'}
+                                    </button>
+                                    <button
+                                        onClick={handleRunCodeNormal}
+                                        disabled={isRunning}
+                                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        {isRunning ? 'Đang chạy...' : 'Chạy thử code (không testcase)'}
                                     </button>
                                 </div>
                             </div>
@@ -249,21 +306,33 @@ const AssignmentContent = ({ courseId }) => {
                         </div>
 
                         {/* Output Panel */}
-                        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                            <div className="bg-gray-50 border-b border-gray-200 p-4">
-                                <h3 className="font-semibold text-gray-900">Kết quả</h3>
+                        {output && (
+                            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-2">
+                                <div className="bg-gray-50 border-b border-gray-200 p-4">
+                                    <h3 className="font-semibold text-gray-900">Kết quả chạy code</h3>
+                                </div>
+                                <div className="p-4">
+                                    <pre className="bg-gray-100 p-4 rounded font-mono text-sm whitespace-pre-wrap min-h-[100px]">
+                                        {output}
+                                    </pre>
+                                </div>
                             </div>
-                            <div className="p-4">
-                                <pre className="bg-gray-100 p-4 rounded font-mono text-sm whitespace-pre-wrap min-h-[100px]">
-                                    {output || 'Nhấn "Chạy thử" để xem kết quả...'}
-                                </pre>
-                            </div>
-                        </div>
-
-                        {selectedAssignment.expectedOutput && (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-green-900 mb-2">Kết quả mong đợi:</h4>
-                                <pre className="text-green-800 font-mono text-sm">{selectedAssignment.expectedOutput}</pre>
+                        )}
+                        {/* Hiển thị kết quả từng testcase */}
+                        {testResults.length > 0 && (
+                            <div className="mt-4">
+                                <h4 className="font-semibold mb-2">Kết quả từng testcase:</h4>
+                                {testResults.map((r, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`border rounded p-3 mb-2 ${r.passed ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}
+                                    >
+                                        <b>Testcase {idx + 1}: {r.passed ? '✅ Pass' : '❌ Fail'}</b>
+                                        <div><b>Input:</b> <pre className="inline">{r.input}</pre></div>
+                                        <div><b>Output mong đợi:</b> <pre className="inline">{r.expected_output}</pre></div>
+                                        <div><b>Output thực tế:</b> <pre className="inline">{r.actual_output}</pre></div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>
@@ -282,8 +351,8 @@ const AssignmentContent = ({ courseId }) => {
                                             <input
                                                 type="radio"
                                                 name={`question-${question.id}`}
-                                                checked={selectedAnswers[question.id] === index}
-                                                onChange={() => handleQuizAnswer(question.id, index)}
+                                                checked={selectedAnswers[question.id] === index + 1}
+                                                onChange={() => handleQuizAnswer(question.id, index + 1)}
                                                 className="text-blue-600"
                                             />
                                             <span className="text-gray-700">{option}</span>
@@ -311,6 +380,7 @@ const AssignmentContent = ({ courseId }) => {
                                             className="hidden"
                                             onChange={handleFileUpload}
                                             accept={selectedAssignment.allowedFormats?.join(',')}
+                                            disabled={uploading}
                                         />
                                     </label>
                                 </div>
@@ -320,7 +390,7 @@ const AssignmentContent = ({ courseId }) => {
                                 </div>
                             </div>
 
-                            {uploadedFile && (
+                            {uploadedFile && fileUrl && (
                                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                                     <div className="flex items-center gap-3">
                                         <CheckCircle className="w-5 h-5 text-green-600" />
@@ -372,6 +442,11 @@ const AssignmentContent = ({ courseId }) => {
                         </div>
                     )}
                 </div>
+                {(score !== null && maxScore !== null) && (
+                    <div className="mt-4 text-lg font-bold text-green-700">
+                        Điểm của bạn: {score} / {maxScore}
+                    </div>
+                )}
             </div>
         );
     };

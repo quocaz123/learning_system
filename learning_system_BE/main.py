@@ -10,6 +10,7 @@ from services.auth_service import decode_token
 from flask_redis import FlaskRedis
 import os
 from dotenv import load_dotenv
+from services.account_service import create_admin_assistants
 
 load_dotenv()
 
@@ -42,4 +43,5 @@ if __name__ == "__main__":
     with app.app_context():
         from database import db
         db.create_all()  # Tạo tất cả bảng theo models
+        create_admin_assistants()
     app.run(debug=True)

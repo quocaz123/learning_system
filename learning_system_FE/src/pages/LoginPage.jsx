@@ -4,6 +4,7 @@ import { loginAPI } from '../../services/AuthService';
 import { useNavigate } from 'react-router-dom';
 import OTPPage from './OTPPage';
 import { toast } from 'react-toastify';
+import { getName } from "../../services/AuthService";
 
 const LoginPage = () => {
     const [formData, setFormData] = useState({
@@ -27,9 +28,24 @@ const LoginPage = () => {
             const res = await loginAPI(formData.email, formData.password);
             if (res && res.access_token) {
                 localStorage.setItem('access_token', res.access_token);
-                navigate('/home');
+                const userInfo = getName(); // userInfo là object chứa role
+
                 toast.success('Đăng nhập thành công!');
-                console.log(res.access_token);
+                setTimeout(() => {
+                    switch (userInfo.role) {
+                        case 'student':
+                            navigate('/home');
+                            break;
+                        case 'teacher':
+                            navigate('/teacher_dashboard');
+                            break;
+                        case 'assistant':
+                            navigate('/dashboard');
+                            break;
+                        default:
+                            navigate('/home');
+                    }
+                }, 1200); // delay 1.2 giây
             }
             else {
                 setUserId(res.user_id);
@@ -37,7 +53,7 @@ const LoginPage = () => {
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.';
-            toast.error(`Đăng nhập thất bại: ${errorMessage}`);
+            toast.error(`Đăng nhập thất bại...`);
         } finally {
             setIsLoading(false);
         }

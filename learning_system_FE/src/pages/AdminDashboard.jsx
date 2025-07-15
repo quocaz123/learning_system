@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Users, BookOpen, BarChart3, Settings, Shield, Database, Activity, TrendingUp, Code, FileText, GraduationCap, Bell
 } from 'lucide-react';
@@ -7,6 +7,7 @@ import StatCard from '../components/Admin/StatCard';
 import TopBar from '../components/Common/TopBar';
 import { stats } from '../data/admin/stats';
 import { recentActivities } from '../data/admin/activities';
+import { getName } from "../../services/AuthService"
 
 const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -22,6 +23,16 @@ const sidebarItems = [
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [inFor, setInFor] = useState('');
+    const [role, setRole] = useState('');
+    
+        useEffect(() => {
+            const userInfo = getName();
+            if (userInfo) {
+                setInFor(userInfo.fullName || '');
+                setRole(userInfo.role || 'Student');
+            }
+        }, []);
 
     const renderDashboard = () => (
         <div className="space-y-6">
@@ -90,8 +101,8 @@ const AdminDashboard = () => {
                 <TopBar
                     title={sidebarItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-                    userName="Admin User"
-                    userEmail="admin@dtu.edu.vn"
+                    inFor={inFor}
+                    role={role}
                     rightContent={
                         <button className="p-2 rounded-lg hover:bg-gray-100 relative">
                             <Bell className="h-5 w-5 text-gray-600" />

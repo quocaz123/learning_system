@@ -47,14 +47,19 @@ function App() {
 
 
         {/* Protected routes for student & teacher */}
-        <Route element={<ProtectedRoute allowedRoles={['admin', 'student', 'teacher']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['assistant', 'teacher']} />}>
           <Route path="/profile" element={<UserProfileContent />} />
           <Route path="/teacher_dashboard" element={<TeacherDashboard />} />
         </Route>
 
         {/* Protected route for admin */}
-        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['assistant']} />}>
           <Route path="/dashboard" element={<AdminDashboard />} />
+        </Route>
+
+         {/* Protected route for admin */}
+         <Route element={<ProtectedRoute allowedRoles={['teacher', 'assistant']} />}>
+          <Route path="/teacher_dashboard" element={<AdminDashboard />} />
         </Route>
 
         {/* Redirect unknown routes */}

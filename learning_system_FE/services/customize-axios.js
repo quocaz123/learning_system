@@ -3,7 +3,7 @@ import { jwtDecode } from "jwt-decode";
 
 const instance = axios.create({
     baseURL: 'http://127.0.0.1:5000',
-    withCredentials: true, // Để gửi cookie khi gọi API
+    withCredentials: true,
 });
 
 function isTokenExpiringSoon(token, thresholdSeconds = 60) {
@@ -20,15 +20,13 @@ function isTokenExpiringSoon(token, thresholdSeconds = 60) {
 instance.interceptors.request.use(
     async (config) => {
         let token = localStorage.getItem("access_token");
-        // Nếu chưa đăng nhập thì không cần kiểm tra token
         if (!token) {
             return config;
         }
         if (isTokenExpiringSoon(token)) {
-            // Gọi refresh, backend sẽ lấy refresh_token từ cookie
             try {
                 const res = await axios.post("http://127.0.0.1:5000/refresh", {}, { withCredentials: true });
-                token = res.access_token;
+                token = res.data.access_token;
                 localStorage.setItem("access_token", token);
             } catch (e) {
                 localStorage.removeItem("access_token");
@@ -44,14 +42,18 @@ instance.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Xử lý response giữ nguyên như cũ
 instance.interceptors.response.use(
     function (response) {
         return response.data ? response.data : { statusCode: response.status };
     },
     function (error) {
+        // Nếu lỗi là 401/403/402 thì logout
+        if (error.response && [401, 402, 403].includes(error.response.status)) {
+            localStorage.removeItem("access_token");
+            window.location.href = "/login";
+        }
         return Promise.reject(error);
     }
 );
 
-export default instance
+export default instance;

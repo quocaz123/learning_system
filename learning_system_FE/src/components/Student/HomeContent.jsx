@@ -5,10 +5,14 @@ import AssignmentService from '../../../services/AssignmentService';
 import { toast } from 'react-toastify';
 
 
-const HomeContent = ({ studentName, setSelectedCourse, setActiveMenu }) => {
+const HomeContent = ({ inFor, setSelectedCourse, setActiveMenu }) => {
     const [courses, setCourses] = useState([]);
     const [statistics, setStatistics] = useState({ submitted_count: 0, grading_count: 0 });
     const [recentLogs, setRecentLogs] = useState([]);
+    const [showAll, setShowAll] = useState(false);
+
+
+
 
 
     useEffect(() => {
@@ -25,6 +29,7 @@ const HomeContent = ({ studentName, setSelectedCourse, setActiveMenu }) => {
             console.log(res);
             setRecentLogs(res || []);
         });
+
     }, []);
 
     const handleEnroll = (courseId) => {
@@ -54,7 +59,7 @@ const HomeContent = ({ studentName, setSelectedCourse, setActiveMenu }) => {
         <div className="space-y-6">
             {/* Welcome Section */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg">
-                <h2 className="text-2xl font-bold mb-2">Xin chào, {studentName}!</h2>
+                <h2 className="text-2xl font-bold mb-2">Xin chào, {inFor}!</h2>
                 <p className="text-blue-100">Chào mừng bạn trở lại với hệ thống học tập</p>
             </div>
 
@@ -66,29 +71,30 @@ const HomeContent = ({ studentName, setSelectedCourse, setActiveMenu }) => {
                         <BookOpenCheck className="mr-2 text-blue-500" size={20} />
                         Khóa học đang theo học
                     </h3>
-                    <div className="space-y-4">
-                        {courses.map((course, index) => {
-                            const colorClass = [
-                                'bg-blue-500',
-                                'bg-green-500',
-                                'bg-purple-500',
-                                'bg-orange-500'
-                            ][index % 4];
-                            return (
-                                <div key={index} className="border-l-4 border-blue-500 pl-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h4 className="font-medium">{course.title}</h4>
-                                        <span className="text-sm text-gray-600">{course.percent_completed}%</span>
+                    <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2">
+                        {courses.filter(course => course.is_enrolled)
+                            .map((course, index) => {
+                                const colorClass = [
+                                    'bg-blue-500',
+                                    'bg-green-500',
+                                    'bg-purple-500',
+                                    'bg-orange-500'
+                                ][index % 4];
+                                return (
+                                    <div key={index} className="border-l-4 border-blue-500 pl-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="font-medium">{course.title}</h4>
+                                            <span className="text-sm text-gray-600">{course.percent_completed}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                                className={`${colorClass} h-2 rounded-full transition-all duration-500`}
+                                                style={{ width: `${course.percent_completed}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                        <div
-                                            className={`${colorClass} h-2 rounded-full transition-all duration-500`}
-                                            style={{ width: `${course.percent_completed}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
                     </div>
                 </div>
 
@@ -116,14 +122,19 @@ const HomeContent = ({ studentName, setSelectedCourse, setActiveMenu }) => {
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">Khóa học của tôi</h1>
                         <p className="text-gray-600">Khám phá và đăng ký các khóa học mới</p>
                     </div>
-                    <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors">
-                        <BookOpen className="w-5 h-5" />
-                        Xem tất cả
-                    </button>
+                    {courses.length > 3 && (
+                        <button
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+                            onClick={() => setShowAll(v => !v)}
+                        >
+                            <BookOpen className="w-5 h-5" />
+                            {showAll ? 'Đóng' : 'Xem tất cả'}
+                        </button>
+                    )}
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {courses.map((course) => (
+                    {(showAll ? courses : courses.slice(0, 3)).map((course) => (
                         <div
                             key={course.course_id}
                             className="bg-gray-50 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow p-6 h-full flex flex-col"
@@ -193,7 +204,7 @@ const HomeContent = ({ studentName, setSelectedCourse, setActiveMenu }) => {
             {/* Recent Activities */}
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-64 overflow-y-auto">
                     {recentLogs.length === 0 && (
                         <div className="text-gray-400">Chưa có hoạt động nào gần đây.</div>
                     )}

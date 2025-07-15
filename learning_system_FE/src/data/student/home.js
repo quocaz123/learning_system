@@ -124,7 +124,5 @@ export const menuItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'courses', label: 'Khóa học', icon: BookOpen },
     { id: 'assignments', label: 'Bài tập', icon: FileText },
-    { id: 'chatbot', label: 'Chatbot AI', icon: MessageCircle },
-    { id: 'profile', label: 'Hồ sơ', icon: User },
-    { id: 'settings', label: 'Cài đặt', icon: Settings }
+    { id: 'profile', label: 'Hồ sơ & Cài đặt', icon: Settings },
 ]; 
