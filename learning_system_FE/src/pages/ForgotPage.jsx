@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
@@ -19,22 +20,11 @@ const ForgotPasswordPage = () => {
         setError('');
 
         try {
-            // Simulate API call - thay thế bằng API thực tế
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Giả lập thành công
+            // Gọi API thực tế
+            await axios.post('http://127.0.0.1:5000/forgot-password', { email });
             setIsSuccess(true);
-
-            // Uncomment và thay thế bằng API call thực tế
-            // const response = await forgotPasswordAPI(email);
-            // if (response.success) {
-            //     setIsSuccess(true);
-            // } else {
-            //     setError(response.message || 'Có lỗi xảy ra, vui lòng thử lại');
-            // }
         } catch (error) {
-            console.error('Lỗi gửi email quên mật khẩu:', error);
-            setError('Email không tồn tại trong hệ thống hoặc có lỗi xảy ra');
+            setError(error?.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại');
         } finally {
             setIsLoading(false);
         }

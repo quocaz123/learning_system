@@ -55,15 +55,19 @@ export const getName = () => {
     }
 };
 
-export const toggle2FAAPI = async () => {
+export const toggle2FAAPI = async (enable) => {
     const response = await axios.post(
         '/2fa/toggle',
-        { enable_2fa: true },
+        { enable_2fa: enable },
         {
             headers: authHeader(),
             withCredentials: true
         }
     );
+    if (response && response.access_token) {
+        localStorage.setItem('access_token', response.access_token);}
+    console.log('toggle2FAAPI raw response:', response.access_token);
+    
     return response;
 };
 

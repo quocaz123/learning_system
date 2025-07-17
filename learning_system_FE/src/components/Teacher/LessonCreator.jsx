@@ -118,7 +118,10 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                 title: lesson.title,
                 content_html: lesson.content_html,
                 code_blocks: codeBlocks,
-                videos: videos,
+                videos: videos.map(video => ({
+                    ...video,
+                    video_url: convertToEmbedUrl(video.video_url)
+                })),
                 attachments: attachments
             };
             let response;
@@ -140,6 +143,17 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
             setIsLoading(false);
         }
     };
+
+    // Thêm hàm chuyển đổi link YouTube thành embed
+    function convertToEmbedUrl(url) {
+        url = url.replace(/^@/, '').trim();
+        const matchShort = url.match(/^https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+        if (matchShort) return `https://www.youtube.com/embed/${matchShort[1]}`;
+        const matchLong = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+        if (matchLong) return `https://www.youtube.com/embed/${matchLong[1]}`;
+        if (url.includes('youtube.com/embed/')) return url;
+        return '';
+    }
 
     const renderContent = () => {
         if (isPreview) {
@@ -172,12 +186,29 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                         {videos.length > 0 && (
                             <div className="mb-6">
                                 <h5 className="font-medium mb-3">Videos</h5>
-                                {videos.map((video, index) => (
-                                    <div key={video.id} className="mb-3 p-3 bg-gray-50 rounded">
-                                        <div className="font-medium">{video.title || `Video ${index + 1}`}</div>
-                                        <div className="text-sm text-gray-600">{video.video_url || 'No URL provided'}</div>
-                                    </div>
-                                ))}
+                                {videos.map((video, index) => {
+                                    const embedUrl = convertToEmbedUrl(video.video_url);
+                                    return (
+                                        <div key={video.id || index} className="mb-3 p-3 bg-gray-50 rounded">
+                                            <div className="font-medium">{video.title || `Video ${index + 1}`}</div>
+                                            {embedUrl ? (
+                                                <div className="mt-2">
+                                                    <iframe
+                                                        width="100%"
+                                                        height="315"
+                                                        src={embedUrl}
+                                                        title={video.title || `Video ${index + 1}`}
+                                                        frameBorder="0"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowFullScreen
+                                                    ></iframe>
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm text-gray-600">{video.video_url || 'No URL provided'}</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -185,7 +216,7 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                             <div className="mb-6">
                                 <h5 className="font-medium mb-3">Attachments</h5>
                                 {attachments.map((attachment, index) => (
-                                    <div key={attachment.id} className="mb-2 p-2 bg-gray-50 rounded flex items-center">
+                                    <div key={attachment.id || index} className="mb-2 p-2 bg-gray-50 rounded flex items-center">
                                         <FileText className="w-4 h-4 mr-2 text-gray-500" />
                                         <span>{attachment.file_name || `Attachment ${index + 1}`}</span>
                                         <span className="ml-2 text-xs text-gray-500">({attachment.file_type})</span>
@@ -330,7 +361,7 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                     </div>
 
                     {videos.map((video, index) => (
-                        <div key={video.id} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                        <div key={video.id || index} className="mb-4 p-4 border border-gray-200 rounded-lg">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center">
                                     <Video className="w-4 h-4 mr-2 text-gray-500" />
@@ -380,7 +411,7 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                     </div>
 
                     {attachments.map((attachment, index) => (
-                        <div key={attachment.id} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                        <div key={attachment.id || index} className="mb-4 p-4 border border-gray-200 rounded-lg">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center">
                                     <Upload className="w-4 h-4 mr-2 text-gray-500" />

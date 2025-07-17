@@ -5,77 +5,76 @@ import {
 import Sidebar from '../components/Common/Sidebar';
 import StatCard from '../components/Admin/StatCard';
 import TopBar from '../components/Common/TopBar';
-import { stats } from '../data/admin/stats';
-import { recentActivities } from '../data/admin/activities';
-import { getName } from "../../services/AuthService"
-
+import AdminUserService from '../../services/AdminUserService';
+import RecentActivities from "../components/Admin/RecentActivities";
+import UserManagement from "../components/Admin/UserManagement";
+import ReportStatistics from "../components/Admin/ReportStatistics";
+import { getName } from '../../services/AuthService';
+import UserProfileSystem from '../components/Student/UserProfileContent';
 const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'users', label: 'Quản lý người dùng', icon: Users },
     { id: 'courses', label: 'Quản lý khóa học', icon: BookOpen },
     { id: 'reports', label: 'Báo cáo & Thống kê', icon: TrendingUp },
-    { id: 'security', label: 'Bảo mật', icon: Shield },
-    { id: 'system', label: 'Hệ thống', icon: Settings },
-    { id: 'backup', label: 'Sao lưu', icon: Database },
-    { id: 'logs', label: 'Nhật ký', icon: Activity }
+    // { id: 'security', label: 'Bảo mật', icon: Shield },
+    { id: 'settings', label: 'Cài đặt', icon: Settings },
+    // { id: 'backup', label: 'Sao lưu', icon: Database },
+    // { id: 'logs', label: 'Nhật ký', icon: Activity }
 ];
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [dashboard, setDashboard] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [inFor, setInFor] = useState('');
     const [role, setRole] = useState('');
-    
-        useEffect(() => {
-            const userInfo = getName();
-            if (userInfo) {
-                setInFor(userInfo.fullName || '');
-                setRole(userInfo.role || 'Student');
-            }
-        }, []);
 
-    const renderDashboard = () => (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Tổng người dùng" value={stats.totalUsers} icon={Users} trend={12} color="blue" />
-                <StatCard title="Khóa học" value={stats.totalCourses} icon={BookOpen} trend={8} color="green" />
-                <StatCard title="Sinh viên hoạt động" value={stats.activeStudents} icon={GraduationCap} trend={-3} color="purple" />
-                <StatCard title="Bài nộp" value={stats.totalSubmissions} icon={FileText} trend={25} color="orange" />
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-lg font-semibold text-gray-900">Hoạt động gần đây</h3>
+    useEffect(() => {
+        AdminUserService.getSummary()
+            .then(data => {
+                setDashboard(data);
+                setLoading(false);
+            })
+            .catch(() => {
+                setError('Không thể tải dữ liệu dashboard');
+                setLoading(false);
+            });
+        const userInfor = getName();
+        if (userInfor) {
+            setInFor(userInfor.fullName || '');
+            setRole(userInfor.role || 'Student')
+        }
+    }, []);
+
+    const renderDashboard = () => {
+        if (loading) return <div>Đang tải dữ liệu...</div>;
+        if (error) return <div className="text-red-500">{error}</div>;
+        if (!dashboard) return null;
+        return (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard title="Tổng người dùng" value={dashboard.total_users} icon={Users} trend={dashboard.users_percent} color="blue" />
+                    <StatCard title="Khóa học" value={dashboard.total_courses} icon={BookOpen} trend={dashboard.courses_percent} color="green" />
+                    <StatCard title="Sinh viên hoạt động" value={dashboard.active_students} icon={GraduationCap} trend={dashboard.students_percent} color="purple" />
+                    <StatCard title="Bài nộp" value={dashboard.total_submissions} icon={FileText} trend={dashboard.submissions_percent} color="orange" />
                 </div>
-                <div className="p-6">
-                    <div className="space-y-4">
-                        {recentActivities.map((activity) => (
-                            <div key={activity.id} className="flex items-center space-x-4">
-                                <div className={`p-2 rounded-full ${activity.type === 'submission' ? 'bg-blue-100' :
-                                    activity.type === 'login' ? 'bg-green-100' :
-                                        activity.type === 'completion' ? 'bg-purple-100' : 'bg-orange-100'
-                                    }`}>
-                                    {activity.type === 'submission' && <Code className="h-4 w-4 text-blue-600" />}
-                                    {activity.type === 'login' && <Users className="h-4 w-4 text-green-600" />}
-                                    {activity.type === 'completion' && <GraduationCap className="h-4 w-4 text-purple-600" />}
-                                    {activity.type === 'course' && <BookOpen className="h-4 w-4 text-orange-600" />}
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{activity.user}</p>
-                                    <p className="text-sm text-gray-600">{activity.action}</p>
-                                </div>
-                                <span className="text-xs text-gray-500">{activity.time}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <RecentActivities />
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderContent = () => {
         switch (activeTab) {
             case 'dashboard':
                 return renderDashboard();
+            case 'users':
+                return <UserManagement />;
+            case 'reports':
+                return <ReportStatistics />;
+            case 'settings':
+                return <UserProfileSystem />;
             // Các case khác có thể tách thành component riêng nếu cần
             default:
                 return (

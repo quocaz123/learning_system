@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpenCheck, CheckCircle, Clock, BookOpen, User } from 'lucide-react';
-import { getAllCoursesAPI, enrollCourseAPI } from '../../../services/CourseService';
+import { getAllCoursesAPI, enrollCourseAPI, getListCoursesAPI } from '../../../services/CourseService';
 import AssignmentService from '../../../services/AssignmentService';
 import { toast } from 'react-toastify';
-
 
 const HomeContent = ({ inFor, setSelectedCourse, setActiveMenu }) => {
     const [courses, setCourses] = useState([]);
@@ -11,43 +10,42 @@ const HomeContent = ({ inFor, setSelectedCourse, setActiveMenu }) => {
     const [recentLogs, setRecentLogs] = useState([]);
     const [showAll, setShowAll] = useState(false);
 
-
-
-
-
     useEffect(() => {
-        getAllCoursesAPI()
+        getListCoursesAPI()
             .then(res => {
-                setCourses(res.data || []);
+                setCourses((res.data || []));
             })
             .catch(() => setCourses([]));
 
-        // Gọi thống kê nhanh khi mount
         handleStatistics();
-        // Gọi API lấy hoạt động gần đây
         AssignmentService.getRecentLogs().then(res => {
-            console.log(res);
             setRecentLogs(res || []);
         });
-
     }, []);
+
+    console.log('courses state:', courses);
 
     const handleEnroll = (courseId) => {
         enrollCourseAPI(courseId)
             .then(() => {
-                getAllCoursesAPI().then(res => setCourses(res.data || []));
-                toast('Đăng kí khóa học thành công...')
+                setCourses(prev =>
+                    prev.map(course =>
+                        course.course_id === courseId
+                            ? { ...course, is_enrolled: true }
+                            : course
+                    )
+                );
+                toast.success('Đăng kí khóa học thành công!');
             })
             .catch(() => {
-
+                toast.error('Đăng ký khóa học thất bại!');
             });
     };
 
     const handleStatistics = async () => {
         try {
             const res = await AssignmentService.getStatusAssignment();
-            console.log(res);
-            if (res && res) {
+            if (res) {
                 setStatistics(res || { submitted_count: 0, grading_count: 0 });
             }
         } catch (error) {
@@ -73,15 +71,15 @@ const HomeContent = ({ inFor, setSelectedCourse, setActiveMenu }) => {
                     </h3>
                     <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2">
                         {courses.filter(course => course.is_enrolled)
-                            .map((course, index) => {
+                            .map((course, idx) => {
                                 const colorClass = [
                                     'bg-blue-500',
                                     'bg-green-500',
                                     'bg-purple-500',
                                     'bg-orange-500'
-                                ][index % 4];
+                                ][idx % 4];
                                 return (
-                                    <div key={index} className="border-l-4 border-blue-500 pl-4">
+                                    <div key={course.course_id} className="border-l-4 border-blue-500 pl-4">
                                         <div className="flex justify-between items-center mb-2">
                                             <h4 className="font-medium">{course.title}</h4>
                                             <span className="text-sm text-gray-600">{course.percent_completed}%</span>

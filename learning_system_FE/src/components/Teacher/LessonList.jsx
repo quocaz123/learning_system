@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, PlusCircle, Search, Filter, BookOpen, Clock, Calendar, MoreHorizontal, Eye, Edit3, Play, Trash2 } from 'lucide-react';
+import { deleteLessonAPI } from '../../../services/LessonService';
 
 const LessonList = ({
     lessons = [],
@@ -12,8 +13,9 @@ const LessonList = ({
     setFilterStatus = () => { },
     onViewLesson,
     onEditLesson,
+    setLessons,
 }) => {
-    console.log('LessonList lessons:', lessons);
+   
     const filteredLessons = lessons.filter(lesson => {
         const matchesSearch = lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (lesson.description ? lesson.description.toLowerCase().includes(searchTerm.toLowerCase()) : false);
@@ -21,6 +23,25 @@ const LessonList = ({
         const matchesFilter = filterStatus === 'all' || !filterStatus || !lesson.status || lesson.status === filterStatus;
         return matchesSearch && matchesFilter;
     });
+
+    const handleDelete = async (lesson_id) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa bài học này không?")) {
+            try {
+                await deleteLessonAPI(lesson_id);
+                // Sau khi xóa, cập nhật lại danh sách bài học
+                if (typeof window !== 'undefined') {
+                    alert("Đã xóa bài học thành công!");
+                }
+                // Nếu có prop setLessons, gọi để cập nhật lại danh sách
+                if (typeof setLessons === 'function') {
+                    setLessons(prev => prev.filter(l => l.lesson_id !== lesson_id));
+                }
+                // Hoặc reload lại trang hoặc gọi lại API lấy danh sách bài học nếu cần
+            } catch (err) {
+                alert("Xóa thất bại!");
+            }
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -84,7 +105,7 @@ const LessonList = ({
             {/* Lessons Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredLessons.map((lesson) => {
-                    console.log('lesson:', lesson);
+                    
                     return (
                         <div key={lesson.lesson_id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200">
                             <div className="p-6">
@@ -144,7 +165,7 @@ const LessonList = ({
                                         </button>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        <button className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded" title="Xóa">
+                                        <button className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded" title="Xóa" onClick={() => handleDelete(lesson.lesson_id)}>
                                             <Trash2 size={16} />
                                         </button>
                                     </div>

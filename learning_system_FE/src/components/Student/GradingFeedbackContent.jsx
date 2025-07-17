@@ -90,9 +90,9 @@ const GradingFeedbackContent = () => {
                 </div>
             </div>
 
-            {submissions.map(submission => (
+            {submissions.map((submission, idx) => (
                 <div
-                    key={submission.id}
+                    key={submission.id || idx}
                     className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
                     onClick={() => setSelectedSubmission(submission)}
                 >
@@ -199,7 +199,7 @@ const GradingFeedbackContent = () => {
                         <div className="space-y-4">
                             <h5 className="font-medium">Chấm điểm theo Rubrics</h5>
                             {currentRubrics.map((rubric, index) => (
-                                <div key={index} className="border rounded p-3">
+                                <div key={rubric.id || index} className="border rounded p-3">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="font-medium">{rubric.criterion}</span>
                                         <span className="text-sm text-gray-600">Trọng số: {rubric.weight}%</span>

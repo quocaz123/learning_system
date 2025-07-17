@@ -146,12 +146,80 @@ def get_lesson_detail(lesson_id):
         return jsonify({"error": "Lesson not found"}), 404
     return jsonify({"data": lesson_data, "status": 200})
 
+@lesson_bp.route('/lessons/<int:lesson_id>', methods=['DELETE'])
+@token_required(['teacher', 'assistant'])
+def delete_lesson(lesson_id):
+    from models.course import LessonAttachment, LessonCodeBlock, LessonVideo
+    from models.assignment import Assignment
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({"error": "Lesson not found"}), 404
+    # Xóa các bản ghi liên quan
+    LessonAttachment.query.filter_by(lesson_id=lesson_id).delete()
+    LessonCodeBlock.query.filter_by(lesson_id=lesson_id).delete()
+    LessonVideo.query.filter_by(lesson_id=lesson_id).delete()
+    Assignment.query.filter_by(lesson_id=lesson_id).delete()
+    db.session.delete(lesson)
+    db.session.commit()
+    return jsonify({"message": "Lesson deleted successfully", "lesson_id": lesson_id, "status": 200}), 200
+
+@course_bp.route('/courses/<int:course_id>', methods=['DELETE'])
+@token_required(['teacher', 'assistant'])
+def delete_course(course_id):
+    course = Course.query.get(course_id)
+    if not course:
+        return jsonify({"error": "Course not found"}), 404
+    # Xóa các bản ghi liên quan
+    Lesson.query.filter_by(course_id=course_id).delete()
+    UserCourse.query.filter_by(course_id=course_id).delete()
+    db.session.delete(course)
+    db.session.commit()
+    return jsonify({"message": "Course deleted successfully", "course_id": course_id, "status": 200}), 200
+
 @course_bp.route('/all_courses', methods=['GET'])
 @token_required()
 def get_all_courses():
     user_id = get_jwt_identity()
-    results = get_all_courses_service(user_id)
+    courses = Course.query.filter_by(created_by=user_id).all()
+    results = []
+    for course in courses:
+        # Đếm số sinh viên
+        students_count = UserCourse.query.filter_by(course_id=course.course_id).count()
+        # Đếm số bài học
+        lessons_count = Lesson.query.filter_by(course_id=course.course_id).count()
+        # Đếm số bài tập (assignment) thuộc các bài học của course này
+        lesson_ids = [l.lesson_id for l in Lesson.query.filter_by(course_id=course.course_id).all()]
+        assignments_count = 0
+        if lesson_ids:
+            from models.assignment import Assignment
+            assignments_count = Assignment.query.filter(Assignment.lesson_id.in_(lesson_ids)).count()
+       
+        results.append({
+            "id": course.course_id,
+            "name": course.title,
+            "students": students_count,
+            "lessons": lessons_count,
+            "assignments": assignments_count
+        })
     return jsonify({"data": results, "status": 200})
+
+@course_bp.route('/courses/<int:course_id>', methods=['PUT'])
+@token_required(['teacher', 'assistant'])
+def update_course(course_id):
+    from services.course_service import update_course_service
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    result = update_course_service(course_id, data)
+    if result.get('success'):
+        return jsonify({
+            "message": "Course updated successfully",
+            "data": result.get('data'),
+            "status": 200
+        }), 200
+    else:
+        return jsonify({"error": result.get('error')}), 400
 
 @lesson_bp.route('/create-lesson', methods=['POST'])
 @token_required()
@@ -194,6 +262,7 @@ def create_lesson():
 @lesson_bp.route('/lessons/complete', methods=['POST'])
 @token_required()
 def complete_lesson():
+    from database import db
     data = request.get_json()
     user_id = data.get('user_id') or get_jwt_identity()
     lesson_id = data.get('lesson_id')
@@ -207,7 +276,6 @@ def complete_lesson():
         progress.completed_at = datetime.utcnow()
     else:
         progress = LessonProgress(user_id=user_id, lesson_id=lesson_id, completed=True, completed_at=datetime.utcnow())
-        from database import db
         db.session.add(progress)
     db.session.commit()
     # Ghi log
@@ -216,4 +284,29 @@ def complete_lesson():
     db.session.add(log)
     db.session.commit()
     return jsonify({'success': True, 'message': 'Đã hoàn thành bài học!'})
+
+@lesson_bp.route('/lessons/<int:lesson_id>', methods=['PUT'])
+@token_required(['teacher', 'assistant'])
+def update_lesson(lesson_id):
+    from services.course_service import update_lesson_service  # Sửa lại import đúng file
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    result = update_lesson_service(lesson_id, data)
+    if result.get('success'):
+        return jsonify({
+            "message": "Lesson updated successfully",
+            "data": result.get('data'),
+            "status": 200
+        }), 200
+    else:
+        return jsonify({"error": result.get('error')}), 400
+
+@course_bp.route('/all-courses', methods=['GET'])
+@token_required()
+def get_all_course():
+    user_id = get_jwt_identity()
+    results = get_all_courses_service(user_id)
+    return jsonify({"data": results, "status": 200}), 200
 

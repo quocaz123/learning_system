@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save, Eye, Book, Globe, User, Calendar, Edit3 } from 'lucide-react';
-import { createCourseAPI } from '../../../services/CourseService';
+import { createCourseAPI, updateCourseAPI } from '../../../services/CourseService';
 import { toast } from 'react-toastify';
 
-const CourseCreator = ({ onCancel }) => {
+const CourseCreator = ({ mode = 'create', courseData = null, onSave, onCancel }) => {
   const [course, setCourse] = useState({
     title: '',
     description: '',
@@ -11,6 +11,16 @@ const CourseCreator = ({ onCancel }) => {
   });
   const [isPreview, setIsPreview] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (mode === 'edit' && courseData) {
+      setCourse({
+        title: courseData.title || '',
+        description: courseData.description || '',
+        language: courseData.language || 'javascript'
+      });
+    }
+  }, [mode, courseData]);
 
   const languages = [
     { value: 'javascript', label: 'JavaScript', color: 'bg-yellow-100 text-yellow-800' },
@@ -42,28 +52,28 @@ const CourseCreator = ({ onCancel }) => {
 
     setIsLoading(true);
     try {
-      const courseData = {
+      const courseDataToSend = {
         title: course.title,
         description: course.description,
         language: course.language
       };
-
-      const response = await createCourseAPI(courseData);
-
-      if (response.status === 201) {
-        toast('Khóa học được tạo thành công!');
+      let response;
+      if (mode === 'edit' && courseData && courseData.course_id) {
+        response = await updateCourseAPI(courseData.course_id, courseDataToSend);
+      } else {
+        response = await createCourseAPI(courseDataToSend);
+      }
+      if ((response.status === 201 && mode === 'create') || (response.status === 200 && mode === 'edit')) {
+        toast(mode === 'edit' ? 'Cập nhật khóa học thành công!' : 'Khóa học được tạo thành công!');
         setCourse({ title: '', description: '', language: 'javascript' });
         setIsPreview(false);
-
-        if (onCancel) {
-          onCancel();
-        }
+        if (onSave) onSave();
+        if (onCancel) onCancel();
       } else {
-        toast('Có lỗi khi tạo khóa học. Vui lòng thử lại.');
+        toast('Có lỗi khi lưu khóa học. Vui lòng thử lại.');
       }
     } catch (error) {
-      console.error('Error creating course:', error);
-      const errorMessage = error.response?.data?.error || 'Error creating course. Please try again.';
+      const errorMessage = error.response?.data?.error || 'Error saving course. Please try again.';
       alert(errorMessage);
     } finally {
       setIsLoading(false);
@@ -213,7 +223,7 @@ const CourseCreator = ({ onCancel }) => {
                   className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Creating...' : 'Create Course'}
+                  {isLoading ? (mode === 'edit' ? 'Updating...' : 'Creating...') : (mode === 'edit' ? 'Update Course' : 'Create Course')}
                 </button>
 
                 {/* Nút Quay lại */}

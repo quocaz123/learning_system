@@ -36,6 +36,15 @@ def create_app():
     # Đăng ký blueprint cho LM Studio
     from routes.lmstudio import lmstudio_bp
     app.register_blueprint(lmstudio_bp)
+    # Đăng ký dashboard
+    from routes.dashboard import dashboard_bp
+    app.register_blueprint(dashboard_bp)
+    # Đăng ký adminuser
+    from routes.adminuser import adminuser_bp
+    app.register_blueprint(adminuser_bp)
+    #Đăng ký report_statistics
+    from routes.report_statistics import report_statistics_bp
+    app.register_blueprint(report_statistics_bp)
     return app
 
 if __name__ == "__main__":

@@ -10,17 +10,19 @@ import {
 } from 'lucide-react';
 import TopBar from '../components/Common/TopBar';
 import Sidebar from '../components/Common/Sidebar';
-import { sidebarItems, courses, assignments } from '../data/teacher/data_dashboard';
+import { sidebarItems, assignments } from '../data/teacher/data_dashboard';
 import AssignmentCreate from '../components/Teacher/AssignmentCreate';
 import AssignmentList from '../components/Teacher/AssignmentList';
 import HomeContent from '../components/Teacher/HomeContent';
 import CourseCreator from '../components/Teacher/CourseCreator';
 import LessonCreator from '../components/Teacher/LessonCreator';
-import { getLessonsByCourseAPI } from '../../services/CourseService';
+import { getLessonsByCourseAPI, getStudentsByCourseAPI, deleteCourseAPI, getAllCoursesAPI } from '../../services/CourseService';
 import LessonList from '../components/Teacher/LessonList';
-import { getStudentsByCourseAPI } from '../../services/CourseService';
 import LessonDetail from '../components/Teacher/LessonDetail';
 import { getName } from "../../services/AuthService";
+import UserProfileSystem from '../components/Student/UserProfileContent';
+import LessonEdit from '../components/Teacher/LessonEdit';
+import { getLessonByIdAPI } from '../../services/LessonService';
 
 const TeacherDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -34,17 +36,30 @@ const TeacherDashboard = () => {
     const [studentsByCourse, setStudentsByCourse] = useState([]);
     const [selectedLessonId, setSelectedLessonId] = useState(null);
     const [showLessonDetail, setShowLessonDetail] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [showLessonEdit, setShowLessonEdit] = useState(false);
+    const [editingLesson, setEditingLesson] = useState(null);
 
     const [inFor, setInFor] = useState('');
     const [role, setRole] = useState('');
-        
-            useEffect(() => {
-                const userInfo = getName();
-                if (userInfo) {
-                    setInFor(userInfo.fullName || '');
-                    setRole(userInfo.role || 'Student');
-                }
-            }, []);
+
+    useEffect(() => {
+        const userInfo = getName();
+        if (userInfo) {
+            setInFor(userInfo.fullName || '');
+            setRole(userInfo.role || 'Student');
+        }
+        const fetchCourses = async () => {
+            try {
+                const res = await getAllCoursesAPI();
+
+                setCourses(res.data || []);
+            } catch {
+                setCourses([]);
+            }
+        };
+        fetchCourses();
+    }, []);
 
 
     const handleViewLessons = async (courseId) => {
@@ -71,7 +86,7 @@ const TeacherDashboard = () => {
         setSelectedStudentCourseId(courseId);
         try {
             const res = await getStudentsByCourseAPI(courseId);
-            console.log(res)
+
             setStudentsByCourse(res.data.students || []);
         } catch {
             setStudentsByCourse([]);
@@ -85,6 +100,36 @@ const TeacherDashboard = () => {
     const handleCloseLessonDetail = () => {
         setShowLessonDetail(false);
         setSelectedLessonId(null);
+    };
+
+    const handleEditLesson = async (lessonId) => {
+        // Tìm lesson trong danh sách lessons để lấy course_id
+        const lessonInList = lessons.find(l => l.lesson_id === lessonId);
+        try {
+            const res = await getLessonByIdAPI(lessonId);
+            let lessonDetail = res.data;
+
+            // Nếu lessonDetail không có course_id, gán lại từ lessonInList
+            if (!lessonDetail.course_id && lessonInList?.course_id) {
+                lessonDetail = { ...lessonDetail, course_id: lessonInList.course_id };
+            }
+            setEditingLesson(lessonDetail);
+            setShowLessonEdit(true);
+        } catch {
+            alert('Không lấy được dữ liệu bài học!');
+        }
+    };
+
+    const handleDeleteCourse = async (course_id) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa khóa học này không?")) {
+            try {
+                await deleteCourseAPI(course_id);
+                alert("Đã xóa khóa học thành công!");
+                setCourses(prev => prev.filter(c => (c.course_id || c.id) !== course_id));
+            } catch {
+                alert("Xóa khóa học thất bại!");
+            }
+        }
     };
 
     const CoursesTab = () => (
@@ -120,22 +165,19 @@ const TeacherDashboard = () => {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bài giảng</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bài tập</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {courses.map(course => (
-                                        <tr key={course.id} className="hover:bg-gray-50">
+                                        <tr key={course.course_id || course.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium text-gray-900">{course.name}</div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.students}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.lessons}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.assignments}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${course.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{course.status === 'active' ? 'Hoạt động' : 'Bản nháp'}</span>
-                                            </td>
+
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex space-x-2">
                                                     <button onClick={() => handleViewLessons(course.course_id || course.id)} className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
@@ -144,7 +186,7 @@ const TeacherDashboard = () => {
                                                     <button className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded">
                                                         <Edit3 size={16} />
                                                     </button>
-                                                    <button className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded">
+                                                    <button className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded" onClick={() => handleDeleteCourse(course.course_id || course.id)}>
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </div>
@@ -162,12 +204,14 @@ const TeacherDashboard = () => {
                 <LessonCreator onCancel={() => setShowLessonCreator(false)} />
             ) : null}
             {/* Hiển thị LessonList khi showLessons */}
-            {showLessons && !showLessonCreator && !showLessonDetail && (
+            {showLessons && !showLessonCreator && !showLessonDetail && !showLessonEdit && (
                 <LessonList
                     lessons={lessons}
+                    setLessons={setLessons}
                     selectedCourseName={selectedCourseId ? (courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.name || courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.title || '') : ''}
                     onBack={handleCloseLessons}
                     onCreateLesson={() => setShowLessonCreator(true)}
+                    onEditLesson={handleEditLesson}
                     searchTerm={''}
                     setSearchTerm={() => { }}
                     filterStatus={''}
@@ -175,6 +219,21 @@ const TeacherDashboard = () => {
                     getStatusColor={(status) => status === 'active' ? 'bg-green-500' : 'bg-gray-500'}
                     getStatusText={(status) => status === 'active' ? 'Hoạt động' : 'Bản nháp'}
                     onViewLesson={handleViewLesson}
+                />
+            )}
+            {showLessonEdit && (
+                <LessonEdit
+                    mode="edit"
+                    lessonData={editingLesson}
+                    onSave={() => {
+                        setShowLessonEdit(false);
+                        setEditingLesson(null);
+                        handleViewLessons(selectedCourseId);
+                    }}
+                    onCancel={() => {
+                        setShowLessonEdit(false);
+                        setEditingLesson(null);
+                    }}
                 />
             )}
             {showLessonDetail && (
@@ -275,7 +334,7 @@ const TeacherDashboard = () => {
             case 'reports':
                 return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-xl font-bold">Báo cáo</h2><p className="text-gray-600 mt-2">Chức năng báo cáo sẽ được phát triển.</p></div>;
             case 'settings':
-                return <div className="bg-white rounded-lg shadow p-6"><h2 className="text-xl font-bold">Cài đặt</h2><p className="text-gray-600 mt-2">Chức năng cài đặt sẽ được phát triển.</p></div>;
+                return <UserProfileSystem />;
             default:
                 return <Dashboard />;
         }

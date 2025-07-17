@@ -178,7 +178,7 @@ def submit_assignment(assignment_id):
         for q in questions:
             answer = None
             if isinstance(quiz_answers, dict):
-                answer = quiz_answers.get(str(q.quecóstion_id))
+                answer = quiz_answers.get(str(q.question_id))
                 if answer is None:
                     answer = quiz_answers.get(q.question_id)
             elif isinstance(quiz_answers, list):

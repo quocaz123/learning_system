@@ -15,6 +15,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import HomePage from './pages/HomePage';
 import CourseCreator from './components/Teacher/CourseCreator';
 import LessonCreator from './components/Teacher/LessonCreator';
+
 function App() {
   return (
     <>
@@ -44,6 +45,7 @@ function App() {
         <Route path="/home" element={<HomePage />} />
         <Route path="/create1" element={<CourseCreator />} />
         <Route path="/create1" element={<LessonCreator />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
 
         {/* Protected routes for student & teacher */}

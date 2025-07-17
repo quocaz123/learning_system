@@ -10,6 +10,7 @@ import AssignmentService from "../../../services/AssignmentService";
 import { runCodeJudge0 } from "../../../services/Judge0Service";
 import { fetchCodeCompletion } from "../../../services/CodeCompletionService";
 import { uploadFileAPI } from '../../../services/FileUploadService';
+import { toast } from 'react-toastify';
 
 const AssignmentContent = ({ courseId }) => {
     const [activeTab, setActiveTab] = useState('assignments');
@@ -114,7 +115,7 @@ const AssignmentContent = ({ courseId }) => {
                     savedAt: new Date().toLocaleString()
                 }
             }));
-            alert('Đã lưu bản nháp!');
+            toast.warning('Đã lưu bản nháp!');
         }
     };
 
@@ -126,8 +127,8 @@ const AssignmentContent = ({ courseId }) => {
             if (selectedAssignment.type === 'quiz') data.quiz_answers = selectedAnswers;
             submitAssignmentAPI(selectedAssignment.assignment_id, data)
                 .then((res) => {
-                    console.log('Kết quả nộp bài:', res);
-                    alert('Nộp bài thành công!');
+                   
+                    toast.success('Nộp bài thành công!');
                     // Cập nhật trạng thái assignment trong danh sách
                     setAssignments(prev =>
                         prev.map(a =>
@@ -165,7 +166,7 @@ const AssignmentContent = ({ courseId }) => {
                 const res = await uploadFileAPI(file);
                 setFileUrl(res.file_url);
             } catch {
-                alert('Lỗi upload file!');
+                toast.warning('Lỗi upload file!');
                 setFileUrl(null);
             }
             setUploading(false);
@@ -324,7 +325,7 @@ const AssignmentContent = ({ courseId }) => {
                                 <h4 className="font-semibold mb-2">Kết quả từng testcase:</h4>
                                 {testResults.map((r, idx) => (
                                     <div
-                                        key={idx}
+                                        key={r.id || idx}
                                         className={`border rounded p-3 mb-2 ${r.passed ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}
                                     >
                                         <b>Testcase {idx + 1}: {r.passed ? '✅ Pass' : '❌ Fail'}</b>
@@ -347,7 +348,7 @@ const AssignmentContent = ({ courseId }) => {
                                 </h3>
                                 <div className="space-y-3">
                                     {question.options.map((option, index) => (
-                                        <label key={index} className="flex items-center gap-3 cursor-pointer">
+                                        <label key={option.id || index} className="flex items-center gap-3 cursor-pointer">
                                             <input
                                                 type="radio"
                                                 name={`question-${question.id}`}

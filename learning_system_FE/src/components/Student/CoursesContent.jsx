@@ -30,6 +30,13 @@ const CoursesContent = ({ selectedCourse }) => {
         }
     }, [selectedCourse]);
 
+    // Reset lesson khi đổi course
+    useEffect(() => {
+        setSelectedLesson(null);
+        setLessonDetail(null);
+        setIsCompleted(false);
+    }, [selected]);
+
     const handleSelectLesson = (lesson) => {
         setSelectedLesson(lesson);
         setIsCompleted(!!lesson.completed);
@@ -40,6 +47,10 @@ const CoursesContent = ({ selectedCourse }) => {
             })
             .catch(() => setLessonDetail(null));
     };
+
+    // Lấy course đang chọn từ mảng courses
+    const currentCourse = courses.find(c => c.course_id === selected);
+    const lessons = currentCourse && Array.isArray(currentCourse.lessons) ? currentCourse.lessons : [];
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -65,25 +76,29 @@ const CoursesContent = ({ selectedCourse }) => {
                 <div className="p-4">
                     <h3 className="font-semibold text-gray-800 mb-3">Danh sách bài học</h3>
                     <div className="space-y-2">
-                        {courses.find(c => c.course_id === selected)?.lessons.map((lesson) => (
-                            <button
-                                key={lesson.lesson_id}
-                                onClick={() => handleSelectLesson(lesson)}
-                                className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${selectedLesson?.lesson_id === lesson.lesson_id ? 'bg-blue-50 text-blue-800' : 'text-gray-700'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <FileText className="w-4 h-4 text-blue-500" />
-                                    <div className="flex-1">
-                                        <div className="text-sm font-medium flex items-center gap-2">
-                                            {lesson.title}
-                                            {lesson.completed && (
-                                                <span className="text-green-600 ml-1" title="Đã hoàn thành">✓</span>
-                                            )}
+                        {lessons.length > 0 ? (
+                            lessons.map((lesson) => (
+                                <button
+                                    key={lesson.lesson_id}
+                                    onClick={() => handleSelectLesson(lesson)}
+                                    className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${selectedLesson?.lesson_id === lesson.lesson_id ? 'bg-blue-50 text-blue-800' : 'text-gray-700'}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <FileText className="w-4 h-4 text-blue-500" />
+                                        <div className="flex-1">
+                                            <div className="text-sm font-medium flex items-center gap-2">
+                                                {lesson.title}
+                                                {lesson.completed && (
+                                                    <span className="text-green-600 ml-1" title="Đã hoàn thành">✓</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </button>
-                        ))}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="text-gray-500 text-sm">Chưa có bài học nào.</div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -94,13 +109,13 @@ const CoursesContent = ({ selectedCourse }) => {
                         <div className="mb-6">
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                                 <BookOpen className="w-4 h-4" />
-                                {courses.find(c => c.course_id === selected)?.title}
+                                {currentCourse?.title}
                             </div>
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">{lessonDetail.title}</h1>
                             <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: lessonDetail.content_html }} />
 
                             {/* Hiển thị video nếu có */}
-                            {lessonDetail.videos && lessonDetail.videos.length > 0 && (
+                            {lessonDetail && lessonDetail.videos && lessonDetail.videos.length > 0 && (
                                 <div className="mt-6">
                                     <h3 className="font-semibold mb-2">Video bài học</h3>
                                     {lessonDetail.videos.map(video => (
@@ -120,7 +135,7 @@ const CoursesContent = ({ selectedCourse }) => {
                             )}
 
                             {/* Hiển thị code block nếu có */}
-                            {lessonDetail.code_blocks && lessonDetail.code_blocks.length > 0 && (
+                            {lessonDetail && lessonDetail.code_blocks && lessonDetail.code_blocks.length > 0 && (
                                 <div className="mt-6">
                                     <h3 className="font-semibold mb-2">Ví dụ minh họa</h3>
                                     {lessonDetail.code_blocks.map(block => (
@@ -128,7 +143,7 @@ const CoursesContent = ({ selectedCourse }) => {
                                             <div className="font-medium">{block.title}</div>
                                             <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">
                                                 <code>
-                                                    {block.code.replace(/\\n/g, '\n')}
+                                                    {block.code.replace(/\n/g, '\n')}
                                                 </code>
                                             </pre>
                                         </div>
@@ -137,7 +152,7 @@ const CoursesContent = ({ selectedCourse }) => {
                             )}
 
                             {/* Hiển thị file đính kèm nếu có */}
-                            {lessonDetail.attachments && lessonDetail.attachments.length > 0 && (
+                            {lessonDetail && lessonDetail.attachments && lessonDetail.attachments.length > 0 && (
                                 <div className="mt-6">
                                     <h3 className="font-semibold mb-2">Tài liệu đính kèm</h3>
                                     <ul>
@@ -169,7 +184,30 @@ const CoursesContent = ({ selectedCourse }) => {
                                         onClick={() => {
                                             const userInfo = getName();
                                             completeLessonAPI(userInfo.id, lessonDetail.lesson_id, selected)
-                                                .then(() => setIsCompleted(true));
+                                                .then(() => {
+                                                    setIsCompleted(true);
+                                                    // Cập nhật trạng thái completed cho lesson trong danh sách lessons
+                                                    setCourses(prevCourses =>
+                                                        prevCourses.map(course =>
+                                                            course.course_id === selected
+                                                                ? {
+                                                                    ...course,
+                                                                    lessons: course.lessons.map(lesson =>
+                                                                        lesson.lesson_id === lessonDetail.lesson_id
+                                                                            ? { ...lesson, completed: true }
+                                                                            : lesson
+                                                                    )
+                                                                }
+                                                                : course
+                                                        )
+                                                    );
+                                                    // Nếu đang chọn lesson, cập nhật luôn selectedLesson.completed
+                                                    setSelectedLesson(prev =>
+                                                        prev && prev.lesson_id === lessonDetail.lesson_id
+                                                            ? { ...prev, completed: true }
+                                                            : prev
+                                                    );
+                                                });
                                         }}
                                     >
                                         Hoàn thành bài học

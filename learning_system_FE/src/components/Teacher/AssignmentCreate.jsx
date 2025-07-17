@@ -24,7 +24,7 @@ const AssignmentCreate = () => {
         const getCourses = async () => {
             try {
                 const res = await getCoursesByUserAPI();
-                console.log(res);
+
                 setCourses(res.result || []);
             } catch {
                 setCourses([]);
@@ -155,8 +155,8 @@ const AssignmentCreate = () => {
             } : {})
         };
 
-        console.log('Payload:', payload);
-        alert('Tạo bài tập thành công! Kiểm tra console.');
+
+        toast('Tạo bài tập thành công!');
     };
 
     const showCode = formData.type === 'code' || formData.type === 'mixed';
@@ -262,7 +262,7 @@ const AssignmentCreate = () => {
                     </div>
                     {formData.code_tests.length === 0 && <p className="text-sm text-blue-700">Chưa có test case nào.</p>}
                     {formData.code_tests.map((test, index) => (
-                        <div key={index} className="bg-white p-3 rounded border">
+                        <div key={test.id || index} className="bg-white p-3 rounded border">
                             <div className="flex justify-between items-center">
                                 <p className="text-sm font-medium">Test #{index + 1}</p>
                                 <button onClick={() => removeCodeTest(index)} className="text-red-500"><Trash2 size={16} /></button>
@@ -297,7 +297,7 @@ const AssignmentCreate = () => {
                     </div>
                     {formData.quiz_questions.length === 0 && <p className="text-sm text-green-700">Chưa có câu hỏi nào.</p>}
                     {formData.quiz_questions.map((q, index) => (
-                        <div key={index} className="bg-white p-3 rounded border space-y-2">
+                        <div key={q.id || index} className="bg-white p-3 rounded border space-y-2">
                             <div className="flex justify-between items-center">
                                 <p className="text-sm font-medium">Câu hỏi #{index + 1}</p>
                                 <button onClick={() => removeQuizQuestion(index)} className="text-red-500"><Trash2 size={16} /></button>
@@ -310,7 +310,7 @@ const AssignmentCreate = () => {
                                 className="w-full border rounded px-2 py-1"
                             />
                             {q.options.map((opt, i) => (
-                                <div key={i} className="flex items-center gap-2">
+                                <div key={opt.id || i} className="flex items-center gap-2">
                                     <input
                                         type="radio"
                                         name={`correct_${index}`}

@@ -2,6 +2,7 @@ from database import db
 from models import Course, Lesson, User, UserCourse
 from sqlalchemy import text
 from models import Lesson, LessonProgress
+from models.course import Lesson, LessonCodeBlock, LessonVideo, LessonAttachment
 
 def create_course_service(user_id, title, description, language):
     """
@@ -133,6 +134,7 @@ def get_lesson_detail_service(lesson_id):
         return None
     lesson_data = {
         "lesson_id": lesson.lesson_id,
+        "course_id": lesson.course_id,
         "title": lesson.title,
         "content_html": lesson.content_html,
         "code_blocks": [
@@ -231,3 +233,87 @@ def create_lesson_service(user_id, course_id, title, content_html, code_blocks=N
     except Exception as e:
         db.session.rollback()
         return {'success': False, 'error': f'Database error: {str(e)}'}
+
+def update_lesson_service(lesson_id, data):
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return {"success": False, "error": "Lesson not found"}
+
+    # Cập nhật trường cơ bản
+    lesson.title = data.get('title', lesson.title)
+    lesson.content_html = data.get('content_html', lesson.content_html)
+    course_id = data.get('course_id')
+    # Chỉ cập nhật nếu course_id hợp lệ
+    if course_id is not None and str(course_id).isdigit():
+        lesson.course_id = int(course_id)
+
+    # --- Cập nhật code_blocks ---
+    if 'code_blocks' in data:
+        LessonCodeBlock.query.filter_by(lesson_id=lesson_id).delete()
+        for block in data['code_blocks']:
+            new_block = LessonCodeBlock(
+                lesson_id=lesson_id,
+                title=block.get('title', ''),
+                language=block.get('language', ''),
+                code=block.get('code', ''),
+                display_order=block.get('display_order', 1)
+            )
+            db.session.add(new_block)
+
+    # --- Cập nhật videos ---
+    if 'videos' in data:
+        LessonVideo.query.filter_by(lesson_id=lesson_id).delete()
+        for video in data['videos']:
+            new_video = LessonVideo(
+                lesson_id=lesson_id,
+                title=video.get('title', ''),
+                video_url=video.get('video_url', ''),
+                display_order=video.get('display_order', 1)
+            )
+            db.session.add(new_video)
+
+    # --- Cập nhật attachments ---
+    if 'attachments' in data:
+        LessonAttachment.query.filter_by(lesson_id=lesson_id).delete()
+        for att in data['attachments']:
+            new_att = LessonAttachment(
+                lesson_id=lesson_id,
+                file_name=att.get('file_name', ''),
+                file_url=att.get('file_url', ''),
+                file_type=att.get('file_type', 'pdf')
+            )
+            db.session.add(new_att)
+
+    db.session.commit()
+    return {
+        "success": True,
+        "data": {
+            "lesson_id": lesson.lesson_id,
+            "title": lesson.title,
+            "content_html": lesson.content_html,
+            "course_id": lesson.course_id
+        }
+    }
+
+def update_course_service(course_id, data):
+    course = Course.query.get(course_id)
+    if not course:
+        return {"success": False, "error": "Course not found"}
+
+    # Cập nhật các trường cơ bản
+    course.title = data.get('title', course.title)
+    course.description = data.get('description', course.description)
+    course.language = data.get('language', course.language)
+
+    from database import db
+    db.session.commit()
+    return {
+        "success": True,
+        "data": {
+            "course_id": course.course_id,
+            "title": course.title,
+            "description": course.description,
+            "language": course.language
+        }
+    }
+

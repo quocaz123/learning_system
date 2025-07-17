@@ -15,6 +15,11 @@ export const getAllCoursesAPI = () =>
         headers: authHeader(),
     });
 
+export const getListCoursesAPI = () =>
+        axios.get("/all-courses", {
+            headers: authHeader(),
+        });
+
 export const enrollCourseAPI = (courseId) =>
     axios.post(`/courses/${courseId}/enroll`, {}, {
         headers: authHeader(),
@@ -47,4 +52,14 @@ export const getLessonsByCourseAPI = (courseId) =>
 export const getStudentsByCourseAPI = (courseId) =>
     axios.get(`/courses/${courseId}/students`, {
         headers: authHeader(),
+    });
+
+export const deleteCourseAPI = (courseId) =>
+    axios.delete(`/courses/${courseId}`, { headers: authHeader() });
+
+export const updateCourseAPI = (courseId, courseData) =>
+    axios.put(`/courses/${courseId}`, courseData, {
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`
+        }
     });

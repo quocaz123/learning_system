@@ -14,6 +14,10 @@ import datetime
 from models import Profile, Course, UserCourse, User, Lesson, Assignment, LessonProgress
 from sqlalchemy import func, text
 from models.log import Log
+from models.reset_token import PasswordResetToken
+from werkzeug.security import generate_password_hash
+import secrets
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -26,6 +30,22 @@ profile_bp = Blueprint('profile', __name__)
 course_user = Blueprint('course_user', __name__)
 
 ALLOWED_ROLES = ['student', 'teacher']
+
+def generate_reset_token():
+    return secrets.token_urlsafe(32)
+
+def send_reset_email(receiver_email, reset_url):
+    from email.message import EmailMessage
+    import smtplib
+    from flask import current_app
+    message = EmailMessage()
+    message['Subject'] = 'Đặt lại mật khẩu'
+    message['From'] = current_app.config['EMAIL_USER']
+    message['To'] = receiver_email
+    message.set_content(f"Nhấn vào liên kết sau để đặt lại mật khẩu: {reset_url}\nLiên kết này sẽ hết hạn sau 30 phút.")
+    with smtplib.SMTP_SSL(current_app.config['EMAIL_HOST'], int(current_app.config['EMAIL_PORT'])) as smtp:
+        smtp.login(current_app.config['EMAIL_USER'], current_app.config['EMAIL_PASS'])
+        smtp.send_message(message)
 
 @bp.route("/register", methods=["POST"])
 def register():
@@ -183,40 +203,40 @@ def logout():
 def forgot_password():
     data = request.json
     email = data.get("email")
-
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"message": "Email not found"}), 404
-
-    otp = generate_otp(user.otp_secret)
-    send_otp_email(user.email, otp)
-
-    return jsonify({
-            "message": "OTP sent to email",
-            "user_id": str(user.user_id),
-        }), 200
+        return jsonify({"message": "Nếu email tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu."}), 200
+    # Sinh token và lưu vào DB
+    token = generate_reset_token()
+    expires_at = datetime.utcnow() + timedelta(minutes=30)
+    reset_token = PasswordResetToken(user_id=user.user_id, token=token, expires_at=expires_at)
+    db.session.add(reset_token)
+    db.session.commit()
+    # Gửi email
+    reset_url = f"http://localhost:5173/reset-password?token={token}"
+    send_reset_email(user.email, reset_url)
+    return jsonify({"message": "Nếu email tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu."}), 200
 
 @bp.route('/reset-password', methods=["POST"])
 def reset_password():
     data = request.json
-    user_id = data.get("user_id")
-    otp_input = data.get("otp")
+    token = data.get("token")
     new_password = data.get("new_password")
     confirm_password = data.get("confirm_password")
+    if not token or not new_password or not confirm_password:
+        return jsonify({"message": "Thiếu thông tin"}), 400
     if new_password != confirm_password:
-        return jsonify({"message": "Passwords do not match"}), 400
-
-    user = User.query.get(user_id)
-    if not user or not user.is_2fa_enabled:
-        return jsonify({"message": "User not found or 2FA not enabled"}), 400
-
-    if not verify_otp(user.otp_secret, otp_input):
-        return jsonify({"message": "Invalid OTP"}), 401
-
+        return jsonify({"message": "Mật khẩu xác nhận không khớp"}), 400
+    reset_token = PasswordResetToken.query.filter_by(token=token).first()
+    if not reset_token or reset_token.expires_at < datetime.utcnow():
+        return jsonify({"message": "Token không hợp lệ hoặc đã hết hạn"}), 400
+    user = User.query.get(reset_token.user_id)
+    if not user:
+        return jsonify({"message": "Người dùng không tồn tại"}), 404
     user.password_hash = generate_password_hash(new_password)
+    db.session.delete(reset_token)
     db.session.commit()
-
-    return jsonify({"message": "Password reset successfully"}), 200
+    return jsonify({"message": "Đặt lại mật khẩu thành công"}), 200
 
 @bp.route('/change-password', methods=["POST"])
 @token_required()
@@ -377,7 +397,7 @@ def enroll_course(course_id):
         return jsonify({"message": "Already enrolled in this course."}), 200
 
     # Thêm khóa học vào danh sách đăng ký của người dùng
-    enrollment = UserCourse(user_id=user_id, course_id=course_id, enrolled_at=datetime.datetime.utcnow())
+    enrollment = UserCourse(user_id=user_id, course_id=course_id, enrolled_at=datetime.utcnow())
     db.session.add(enrollment)
     db.session.commit()
 

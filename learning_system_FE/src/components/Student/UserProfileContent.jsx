@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { updateProfileAPI, getProfileAPI, toggle2FAAPI, changePasswordAPI, logoutAPI } from '../../../services/AuthService';
 import { jwtDecode } from "jwt-decode";
+import { toast } from 'react-toastify';
 
 // Component con: ProfileTab
 const ProfileTab = ({
@@ -288,7 +289,7 @@ const UserProfileSystem = () => {
         if (token) {
             try {
                 const payload = jwtDecode(token);
-                return payload.is_2fa_enabled; // hoặc payload.twofa_enabled
+                return payload.is_2fa_enabled ?? payload['2fa'] ?? payload['2fa_enabled'] ?? false; // hoặc payload.twofa_enabled
             } catch {
                 return false;
             }
@@ -396,18 +397,18 @@ const UserProfileSystem = () => {
     // Handle password change
     const handlePasswordChange = async () => {
         if (passwordData.new_password !== passwordData.confirm_password) {
-            alert('Mật khẩu xác nhận không khớp!');
+            toast.warning('Mật khẩu xác nhận không khớp!');
             return;
         }
         if (passwordData.new_password.length < 8) {
-            alert('Mật khẩu phải có ít nhất 8 ký tự!');
+            toast.warning('Mật khẩu phải có ít nhất 8 ký tự!');
             return;
         }
         console.log(passwordData);
         try {
             const res = await changePasswordAPI(passwordData);
             if (res && res.status === 200) {
-                alert('Đổi mật khẩu thành công!');
+                toast.success('Đổi mật khẩu thành công!');
                 setPasswordData({
                     user_id: '',
                     current_password: '',
@@ -446,11 +447,11 @@ const UserProfileSystem = () => {
                     get2FAStatusFromToken()
                 );
             } else {
-                alert('Không nhận được phản hồi từ server!');
+               
                 return;
             }
         } catch (err) {
-            console.error('2FA API error:', err);
+            console.error( err);
         }
     };
 
@@ -471,7 +472,7 @@ const UserProfileSystem = () => {
         try {
             const res = await logoutAPI();
             if (res && res.data && res.data.message) {
-                alert(res.data.message);
+               toast.success("Logout thành công...")
             }
         } catch (e) {
             console.error(e);

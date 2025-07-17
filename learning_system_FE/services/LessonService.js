@@ -18,4 +18,9 @@ export const updateLessonAPI = (lessonId, lessonData) =>
 export const getLessonByIdAPI = (lessonId) =>
     axios.get(`/lessons/${lessonId}`, {
         headers: authHeader(),
+    });
+
+export const deleteLessonAPI = (lessonId) =>
+    axios.delete(`/lessons/${lessonId}`, {
+        headers: authHeader(),
     }); 

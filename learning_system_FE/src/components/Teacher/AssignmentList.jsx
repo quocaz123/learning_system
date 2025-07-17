@@ -24,7 +24,7 @@ const AssignmentList = () => {
                 setTotalPages(res.pages || 1);
             }
         } catch (error) {
-            console.error("Error fetching assignments:", error);
+           
             setAssignments([]);
             setTotalPages(1);
         }
