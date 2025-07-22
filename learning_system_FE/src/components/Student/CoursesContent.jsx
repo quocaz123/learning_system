@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     FileText,
     BookOpen,
+    ChevronDown,
 
 } from 'lucide-react';
 import { getMyCoursesAPI, getLessonDetailAPI, completeLessonAPI } from '../../../services/CourseService';
@@ -13,6 +14,8 @@ const CoursesContent = ({ selectedCourse }) => {
     const [selectedLesson, setSelectedLesson] = useState(null);
     const [lessonDetail, setLessonDetail] = useState(null);
     const [isCompleted, setIsCompleted] = useState(false);
+    const [isCoursesExpanded, setIsCoursesExpanded] = useState(true); // State for course list visibility
+    const [isLessonsExpanded, setIsLessonsExpanded] = useState(true); // State for lesson list visibility
 
     useEffect(() => {
         getMyCoursesAPI()
@@ -55,10 +58,18 @@ const CoursesContent = ({ selectedCourse }) => {
     return (
         <div className="flex h-screen bg-gray-50">
             <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-                <div className="p-4 border-b border-gray-200">
+                <div
+                    className="p-4 border-b border-gray-200 flex justify-between items-center cursor-pointer"
+                    onClick={() => setIsCoursesExpanded(!isCoursesExpanded)}
+                >
                     <h2 className="text-xl font-bold text-gray-800">Khóa học</h2>
+                    <ChevronDown
+                        className={`w-5 h-5 text-gray-500 transform transition-transform ${isCoursesExpanded ? 'rotate-180' : ''}`}
+                    />
                 </div>
-                <div className="p-4 border-b border-gray-200">
+                <div
+                    className={`transition-all duration-300 ease-in-out ${isCoursesExpanded ? 'max-h-96 p-4 border-b border-gray-200 overflow-y-auto' : 'max-h-0 p-0 border-0 overflow-hidden'}`}
+                >
                     <div className="space-y-2">
                         {courses.map((course) => (
                             <button
@@ -74,31 +85,43 @@ const CoursesContent = ({ selectedCourse }) => {
                 </div>
 
                 <div className="p-4">
-                    <h3 className="font-semibold text-gray-800 mb-3">Danh sách bài học</h3>
-                    <div className="space-y-2">
-                        {lessons.length > 0 ? (
-                            lessons.map((lesson) => (
-                                <button
-                                    key={lesson.lesson_id}
-                                    onClick={() => handleSelectLesson(lesson)}
-                                    className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${selectedLesson?.lesson_id === lesson.lesson_id ? 'bg-blue-50 text-blue-800' : 'text-gray-700'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="w-4 h-4 text-blue-500" />
-                                        <div className="flex-1">
-                                            <div className="text-sm font-medium flex items-center gap-2">
-                                                {lesson.title}
-                                                {lesson.completed && (
-                                                    <span className="text-green-600 ml-1" title="Đã hoàn thành">✓</span>
-                                                )}
+                    <div
+                        className="flex justify-between items-center cursor-pointer mb-3"
+                        onClick={() => setIsLessonsExpanded(!isLessonsExpanded)}
+                    >
+                        <h3 className="font-semibold text-gray-800">Danh sách bài học</h3>
+                        <ChevronDown
+                            className={`w-5 h-5 text-gray-500 transform transition-transform ${isLessonsExpanded ? 'rotate-180' : ''}`}
+                        />
+                    </div>
+                    <div
+                        className={`transition-all duration-300 ease-in-out ${isLessonsExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-0 overflow-hidden'}`}
+                    >
+                        <div className="space-y-2">
+                            {lessons.length > 0 ? (
+                                lessons.map((lesson) => (
+                                    <button
+                                        key={lesson.lesson_id}
+                                        onClick={() => handleSelectLesson(lesson)}
+                                        className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${selectedLesson?.lesson_id === lesson.lesson_id ? 'bg-blue-50 text-blue-800' : 'text-gray-700'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="w-4 h-4 text-blue-500" />
+                                            <div className="flex-1">
+                                                <div className="text-sm font-medium flex items-center gap-2">
+                                                    {lesson.title}
+                                                    {lesson.completed && (
+                                                        <span className="text-green-600 ml-1" title="Đã hoàn thành">✓</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </button>
-                            ))
-                        ) : (
-                            <div className="text-gray-500 text-sm">Chưa có bài học nào.</div>
-                        )}
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="text-gray-500 text-sm">Chưa có bài học nào.</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -158,14 +181,12 @@ const CoursesContent = ({ selectedCourse }) => {
                                     <ul>
                                         {lessonDetail.attachments.map(file => (
                                             <li key={file.attachment_id}>
-                                                <a
-                                                    href={file.file_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    onClick={() => window.open(`http://localhost:5000${file.file_url}`, '_blank')}
                                                     className="text-blue-600 hover:underline"
                                                 >
                                                     {file.file_name}
-                                                </a>
+                                                </button>
                                             </li>
                                         ))}
                                     </ul>

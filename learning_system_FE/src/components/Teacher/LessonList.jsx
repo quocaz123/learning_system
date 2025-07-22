@@ -1,27 +1,23 @@
-import React from 'react';
-import { ArrowLeft, PlusCircle, Search, Filter, BookOpen, Clock, Calendar, MoreHorizontal, Eye, Edit3, Play, Trash2 } from 'lucide-react';
+import React, { memo } from 'react';
+import { ArrowLeft, PlusCircle, Search, BookOpen, Clock, MoreHorizontal, Eye, Edit3, Trash2 } from 'lucide-react';
 import { deleteLessonAPI } from '../../../services/LessonService';
 
-const LessonList = ({
+const LessonList = memo(({
     lessons = [],
     selectedCourseName = '',
     onBack,
     onCreateLesson,
     searchTerm = '',
     setSearchTerm = () => { },
-    filterStatus = 'all',
-    setFilterStatus = () => { },
     onViewLesson,
     onEditLesson,
     setLessons,
 }) => {
-   
+
     const filteredLessons = lessons.filter(lesson => {
         const matchesSearch = lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (lesson.description ? lesson.description.toLowerCase().includes(searchTerm.toLowerCase()) : false);
-        // Nếu không có trường status thì luôn cho qua filter
-        const matchesFilter = filterStatus === 'all' || !filterStatus || !lesson.status || lesson.status === filterStatus;
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
     });
 
     const handleDelete = async (lesson_id) => {
@@ -37,7 +33,7 @@ const LessonList = ({
                     setLessons(prev => prev.filter(l => l.lesson_id !== lesson_id));
                 }
                 // Hoặc reload lại trang hoặc gọi lại API lấy danh sách bài học nếu cần
-            } catch (err) {
+            } catch {
                 alert("Xóa thất bại!");
             }
         }
@@ -83,18 +79,6 @@ const LessonList = ({
                                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
                             />
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Filter size={20} className="text-gray-400" />
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="all">Tất cả trạng thái</option>
-                                <option value="published">Đã xuất bản</option>
-                                <option value="draft">Bản nháp</option>
-                            </select>
-                        </div>
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <span>Tổng: {filteredLessons.length} bài học</span>
@@ -105,7 +89,7 @@ const LessonList = ({
             {/* Lessons Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredLessons.map((lesson) => {
-                    
+
                     return (
                         <div key={lesson.lesson_id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200">
                             <div className="p-6">
@@ -177,6 +161,6 @@ const LessonList = ({
             </div>
         </div>
     );
-};
+});
 
 export default LessonList; 

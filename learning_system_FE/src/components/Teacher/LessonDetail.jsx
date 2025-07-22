@@ -80,14 +80,12 @@ const LessonDetail = ({ lessonId, onClose }) => {
                     <ul>
                         {lessonDetail.attachments.map(file => (
                             <li key={file.attachment_id}>
-                                <a
-                                    href={file.file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <button
+                                    onClick={() => window.open(`http://localhost:5000${file.file_url}`, '_blank')}
                                     className="text-blue-600 hover:underline"
                                 >
                                     {file.file_name}
-                                </a>
+                                </button>
                             </li>
                         ))}
                     </ul>

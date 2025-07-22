@@ -10,29 +10,35 @@ def get_student_count_by_course(course_id):
         .filter(UserCourse.course_id == course_id, User.role == 'student').count()
     return count
 
-def get_assignments(page, per_page):
+def get_assignments(page, per_page, teacher_id=None):
+    # Base query
     query = (
         db.session.query(
             Assignment.assignment_id,
             Assignment.title,
             Assignment.due_date,
             Course.title.label('course_title'),
-            Course.course_id.label('course_id'),  # Thêm dòng này
+            Course.course_id.label('course_id'),
             func.count(Submission.submission_id).label('submission_count'),
         )
         .join(Lesson, Assignment.lesson_id == Lesson.lesson_id)
         .join(Course, Lesson.course_id == Course.course_id)
         .outerjoin(Submission, Submission.assignment_id == Assignment.assignment_id)
-        .group_by(
-            Assignment.assignment_id,
-            Assignment.title,
-            Assignment.due_date,
-            Course.title,
-            Course.course_id  # Nhớ group_by luôn
-        )
-        .order_by(Assignment.due_date.desc())
     )
 
+    # Apply filter if teacher_id is provided
+    if teacher_id:
+        query = query.filter(Course.created_by == teacher_id)
+
+    # Apply grouping and ordering
+    query = query.group_by(
+        Assignment.assignment_id,
+        Assignment.title,
+        Assignment.due_date,
+        Course.title,
+        Course.course_id
+    ).order_by(Assignment.due_date.desc())
+    
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     result = []

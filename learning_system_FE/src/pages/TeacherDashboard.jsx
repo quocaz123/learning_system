@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
     PlusCircle,
     Edit3,
@@ -24,117 +24,21 @@ import UserProfileSystem from '../components/Student/UserProfileContent';
 import LessonEdit from '../components/Teacher/LessonEdit';
 import { getLessonByIdAPI } from '../../services/LessonService';
 
-const TeacherDashboard = () => {
-    const [activeTab, setActiveTab] = useState('dashboard');
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [showCoursesOpen, setShowCoursesOpen] = useState(false);
-    const [showLessonCreator, setShowLessonCreator] = useState(false);
-    const [selectedCourseId, setSelectedCourseId] = useState(null);
-    const [lessons, setLessons] = useState([]);
-    const [showLessons, setShowLessons] = useState(false);
-    const [selectedStudentCourseId, setSelectedStudentCourseId] = useState(null);
-    const [studentsByCourse, setStudentsByCourse] = useState([]);
-    const [selectedLessonId, setSelectedLessonId] = useState(null);
-    const [showLessonDetail, setShowLessonDetail] = useState(false);
-    const [courses, setCourses] = useState([]);
-    const [showLessonEdit, setShowLessonEdit] = useState(false);
-    const [editingLesson, setEditingLesson] = useState(null);
+// --- Di chuyển CoursesTab ra ngoài và bọc trong memo ---
+const CoursesTab = memo(({
+    showCoursesOpen, showLessonCreator, showLessons, showLessonDetail, showLessonEdit,
+    courses, lessons, editingLesson, selectedCourseId, selectedLessonId, searchTerm,
+    setShowCoursesOpen, setShowLessonCreator, setLessons, setEditingLesson, setShowLessonEdit, setSearchTerm,
+    handleViewLessons, handleDeleteCourse, handleCloseLessons, handleCreateLesson, handleEditLesson, handleViewLesson, handleCloseLessonDetail
+}) => {
+    const selectedCourseName = useMemo(() => {
+        if (!selectedCourseId) return '';
+        const course = courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId);
+        return course?.name || course?.title || '';
+    }, [courses, selectedCourseId]);
 
-    const [inFor, setInFor] = useState('');
-    const [role, setRole] = useState('');
-
-    useEffect(() => {
-        const userInfo = getName();
-        if (userInfo) {
-            setInFor(userInfo.fullName || '');
-            setRole(userInfo.role || 'Student');
-        }
-        const fetchCourses = async () => {
-            try {
-                const res = await getAllCoursesAPI();
-
-                setCourses(res.data || []);
-            } catch {
-                setCourses([]);
-            }
-        };
-        fetchCourses();
-    }, []);
-
-
-    const handleViewLessons = async (courseId) => {
-        setSelectedCourseId(courseId);
-        try {
-            const res = await getLessonsByCourseAPI(courseId);
-            // Kiểm tra dữ liệu trả về
-            const lessonsArr = res?.result || [];
-            setLessons(Array.isArray(lessonsArr) ? lessonsArr : []);
-            setShowLessons(true);
-        } catch {
-            setLessons([]);
-            setShowLessons(true);
-        }
-    };
-
-    const handleCloseLessons = () => {
-        setShowLessons(false);
-        setLessons([]);
-        setSelectedCourseId(null);
-    };
-
-    const handleViewStudents = async (courseId) => {
-        setSelectedStudentCourseId(courseId);
-        try {
-            const res = await getStudentsByCourseAPI(courseId);
-
-            setStudentsByCourse(res.data.students || []);
-        } catch {
-            setStudentsByCourse([]);
-        }
-    };
-
-    const handleViewLesson = (lessonId) => {
-        setSelectedLessonId(lessonId);
-        setShowLessonDetail(true);
-    };
-    const handleCloseLessonDetail = () => {
-        setShowLessonDetail(false);
-        setSelectedLessonId(null);
-    };
-
-    const handleEditLesson = async (lessonId) => {
-        // Tìm lesson trong danh sách lessons để lấy course_id
-        const lessonInList = lessons.find(l => l.lesson_id === lessonId);
-        try {
-            const res = await getLessonByIdAPI(lessonId);
-            let lessonDetail = res.data;
-
-            // Nếu lessonDetail không có course_id, gán lại từ lessonInList
-            if (!lessonDetail.course_id && lessonInList?.course_id) {
-                lessonDetail = { ...lessonDetail, course_id: lessonInList.course_id };
-            }
-            setEditingLesson(lessonDetail);
-            setShowLessonEdit(true);
-        } catch {
-            alert('Không lấy được dữ liệu bài học!');
-        }
-    };
-
-    const handleDeleteCourse = async (course_id) => {
-        if (window.confirm("Bạn có chắc chắn muốn xóa khóa học này không?")) {
-            try {
-                await deleteCourseAPI(course_id);
-                alert("Đã xóa khóa học thành công!");
-                setCourses(prev => prev.filter(c => (c.course_id || c.id) !== course_id));
-            } catch {
-                alert("Xóa khóa học thất bại!");
-            }
-        }
-    };
-
-    const CoursesTab = () => (
+    return (
         <div className="space-y-6">
-            {/* Ẩn bảng khóa học khi showLessons */}
             {(!showCoursesOpen && !showLessonCreator && !showLessons) ? (
                 <>
                     <div className="flex items-center justify-between">
@@ -149,7 +53,7 @@ const TeacherDashboard = () => {
                             </button>
                             <button
                                 className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-700 transition-colors"
-                                onClick={() => setShowLessonCreator(true)}
+                                onClick={handleCreateLesson}
                             >
                                 <PlusCircle size={20} className="mr-2" />
                                 Tạo bài học
@@ -203,21 +107,16 @@ const TeacherDashboard = () => {
             ) : showLessonCreator ? (
                 <LessonCreator onCancel={() => setShowLessonCreator(false)} />
             ) : null}
-            {/* Hiển thị LessonList khi showLessons */}
             {showLessons && !showLessonCreator && !showLessonDetail && !showLessonEdit && (
                 <LessonList
                     lessons={lessons}
                     setLessons={setLessons}
-                    selectedCourseName={selectedCourseId ? (courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.name || courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.title || '') : ''}
+                    selectedCourseName={selectedCourseName}
                     onBack={handleCloseLessons}
-                    onCreateLesson={() => setShowLessonCreator(true)}
+                    onCreateLesson={handleCreateLesson}
                     onEditLesson={handleEditLesson}
-                    searchTerm={''}
-                    setSearchTerm={() => { }}
-                    filterStatus={''}
-                    setFilterStatus={() => { }}
-                    getStatusColor={(status) => status === 'active' ? 'bg-green-500' : 'bg-gray-500'}
-                    getStatusText={(status) => status === 'active' ? 'Hoạt động' : 'Bản nháp'}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
                     onViewLesson={handleViewLesson}
                 />
             )}
@@ -241,6 +140,127 @@ const TeacherDashboard = () => {
             )}
         </div>
     );
+});
+
+const TeacherDashboard = () => {
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [showCoursesOpen, setShowCoursesOpen] = useState(false);
+    const [showLessonCreator, setShowLessonCreator] = useState(false);
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
+    const [lessons, setLessons] = useState([]);
+    const [showLessons, setShowLessons] = useState(false);
+    const [selectedStudentCourseId, setSelectedStudentCourseId] = useState(null);
+    const [studentsByCourse, setStudentsByCourse] = useState([]);
+    const [selectedLessonId, setSelectedLessonId] = useState(null);
+    const [showLessonDetail, setShowLessonDetail] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [showLessonEdit, setShowLessonEdit] = useState(false);
+    const [editingLesson, setEditingLesson] = useState(null);
+    const [searchTerm, setSearchTerm] = useState(''); // Thêm state cho tìm kiếm
+
+    const [inFor, setInFor] = useState('');
+    const [role, setRole] = useState('');
+
+    useEffect(() => {
+        const userInfo = getName();
+        if (userInfo) {
+            setInFor(userInfo.fullName || '');
+            setRole(userInfo.role || 'Student');
+        }
+        const fetchCourses = async () => {
+            try {
+                const res = await getAllCoursesAPI();
+
+                setCourses(res.data || []);
+            } catch {
+                setCourses([]);
+            }
+        };
+        fetchCourses();
+    }, []);
+
+    const handleViewLessons = useCallback(async (courseId) => {
+        setSelectedCourseId(courseId);
+        try {
+            const res = await getLessonsByCourseAPI(courseId);
+            // Kiểm tra dữ liệu trả về
+            const lessonsArr = res?.result || [];
+            setLessons(Array.isArray(lessonsArr) ? lessonsArr : []);
+            setShowLessons(true);
+        } catch {
+            setLessons([]);
+            setShowLessons(true);
+        }
+    }, []); // Empty dependency array as it doesn't depend on component state/props
+
+    const handleCloseLessons = useCallback(() => {
+        setShowLessons(false);
+        setLessons([]);
+        setSelectedCourseId(null);
+    }, []);
+
+    const handleViewStudents = useCallback(async (courseId) => {
+        setSelectedStudentCourseId(courseId);
+        try {
+            const res = await getStudentsByCourseAPI(courseId);
+
+            setStudentsByCourse(res.data.students || []);
+        } catch {
+            setStudentsByCourse([]);
+        }
+    }, []);
+
+    const handleViewLesson = useCallback((lessonId) => {
+        setSelectedLessonId(lessonId);
+        setShowLessonDetail(true);
+    }, []);
+    const handleCloseLessonDetail = useCallback(() => {
+        setShowLessonDetail(false);
+        setSelectedLessonId(null);
+    }, []);
+
+    const handleEditLesson = useCallback(async (lessonId) => {
+        // Tìm lesson trong danh sách lessons để lấy course_id
+        const lessonInList = lessons.find(l => l.lesson_id === lessonId);
+        try {
+            const res = await getLessonByIdAPI(lessonId);
+            let lessonDetail = res.data;
+
+            // Nếu lessonDetail không có course_id, gán lại từ lessonInList
+            if (!lessonDetail.course_id && lessonInList?.course_id) {
+                lessonDetail = { ...lessonDetail, course_id: lessonInList.course_id };
+            }
+            setEditingLesson(lessonDetail);
+            setShowLessonEdit(true);
+        } catch {
+            alert('Không lấy được dữ liệu bài học!');
+        }
+    }, [lessons]); // Depends on 'lessons' state
+
+    const handleDeleteCourse = useCallback(async (course_id) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa khóa học này không?")) {
+            try {
+                await deleteCourseAPI(course_id);
+                alert("Đã xóa khóa học thành công!");
+                setCourses(prev => prev.filter(c => (c.course_id || c.id) !== course_id));
+            } catch {
+                alert("Xóa khóa học thất bại!");
+            }
+        }
+    }, []);
+
+    const handleCreateLesson = useCallback(() => {
+        setShowLessonCreator(true);
+    }, []);
+
+    const selectedCourseName = useMemo(() => {
+        if (!selectedCourseId) return '';
+        const course = courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId);
+        return course?.name || course?.title || '';
+    }, [courses, selectedCourseId]);
+
+    // Xóa định nghĩa CoursesTab ở đây
 
     const AssignmentsTab = () => {
         const [showCreate, setShowCreate] = useState(false);
@@ -324,7 +344,33 @@ const TeacherDashboard = () => {
             case 'dashboard':
                 return <HomeContent />;
             case 'courses':
-                return <CoursesTab />;
+                return <CoursesTab
+                    showCoursesOpen={showCoursesOpen}
+                    setShowCoursesOpen={setShowCoursesOpen}
+                    showLessonCreator={showLessonCreator}
+                    setShowLessonCreator={setShowLessonCreator}
+                    showLessons={showLessons}
+                    courses={courses}
+                    handleViewLessons={handleViewLessons}
+                    handleDeleteCourse={handleDeleteCourse}
+                    lessons={lessons}
+                    setLessons={setLessons}
+                    selectedCourseName={selectedCourseName}
+                    handleCloseLessons={handleCloseLessons}
+                    handleCreateLesson={handleCreateLesson}
+                    handleEditLesson={handleEditLesson}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    handleViewLesson={handleViewLesson}
+                    showLessonDetail={showLessonDetail}
+                    showLessonEdit={showLessonEdit}
+                    editingLesson={editingLesson}
+                    setShowLessonEdit={setShowLessonEdit}
+                    setEditingLesson={setEditingLesson}
+                    selectedCourseId={selectedCourseId}
+                    selectedLessonId={selectedLessonId}
+                    handleCloseLessonDetail={handleCloseLessonDetail}
+                />;
             case 'assignments':
                 return <AssignmentsTab />;
             case 'students':

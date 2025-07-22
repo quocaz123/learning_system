@@ -26,7 +26,7 @@ instance.interceptors.request.use(
         if (isTokenExpiringSoon(token)) {
             try {
                 const res = await axios.post("http://127.0.0.1:5000/refresh", {}, { withCredentials: true });
-                token = res.data.access_token;
+                token = res.access_token;
                 localStorage.setItem("access_token", token);
             } catch (e) {
                 localStorage.removeItem("access_token");

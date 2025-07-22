@@ -3,6 +3,7 @@ import { Plus, X, Upload, Video, Code, FileText, Save, Eye } from 'lucide-react'
 import { getAllCoursesAPI } from '../../../services/CourseService';
 import { createLessonAPI, updateLessonAPI } from '../../../services/LessonService';
 import { toast } from 'react-toastify';
+import { uploadFileAPI } from '../../../services/FileUploadService';
 
 const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel }) => {
     const [courses, setCourses] = useState([]);
@@ -23,7 +24,16 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
         const fetchCourses = async () => {
             try {
                 const res = await getAllCoursesAPI();
-                setCourses(res.data || []);
+                // API trả về một mảng [ { id, name, ... } ]
+                if (res.data && Array.isArray(res.data)) {
+                    const formattedCourses = res.data.map(course => ({
+                        course_id: course.id,
+                        title: course.name
+                    }));
+                    setCourses(formattedCourses);
+                } else {
+                    setCourses([]);
+                }
             } catch {
                 setCourses([]);
             }
@@ -40,9 +50,12 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                 course_id: lessonData.course_id || ''
             });
             setSelectedCourse(lessonData.course_id || '');
-            setCodeBlocks(lessonData.code_blocks || []);
-            setVideos(lessonData.videos || []);
-            setAttachments(lessonData.attachments || []);
+
+            // Map backend data to include a client-side 'id' for consistent handling
+            setCodeBlocks(lessonData.code_blocks?.map(b => ({ ...b, id: b.block_id })) || []);
+            setVideos(lessonData.videos?.map(v => ({ ...v, id: v.video_id })) || []);
+            setAttachments(lessonData.attachments?.map(a => ({ ...a, id: a.attachment_id })) || []);
+
         } else if (mode === 'create') {
             setLesson({ title: '', content_html: '', course_id: '' });
             setSelectedCourse('');
@@ -110,11 +123,50 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
         setAttachments(attachments.filter(attachment => attachment.id !== id));
     };
 
+    // Thêm hàm xử lý upload file cho attachment
+    const handleFileChange = async (id, file) => {
+        if (!file) return;
+
+        // Cập nhật trực tiếp để hiển thị 'Đang upload...'
+        updateAttachment(id, 'file_url', 'Đang upload...');
+
+        try {
+            const res = await uploadFileAPI(file);
+
+            if (res && res.file_url) {
+                const fileName = file.name;
+                const fileType = fileName.split('.').pop();
+
+                // Cập nhật tất cả các trường trong một lần duy nhất
+                setAttachments(prev => prev.map(att =>
+                    att.id === id
+                        ? { ...att, file_name: fileName, file_type: fileType, file_url: res.file_url }
+                        : att
+                ));
+            } else {
+                // Nếu thất bại, xóa trạng thái 'Đang upload...'
+                updateAttachment(id, 'file_url', '');
+                toast.error('Upload file thất bại!');
+            }
+        } catch {
+            updateAttachment(id, 'file_url', '');
+            toast.error('Upload file thất bại!');
+        }
+    };
+
     const handleSubmit = async () => {
         setIsLoading(true);
         try {
+            // Ensure course_id is a number
+            const courseIdNumber = parseInt(selectedCourse, 10);
+            if (isNaN(courseIdNumber)) {
+                toast.error("Invalid Course ID. Please select a valid course.");
+                setIsLoading(false);
+                return;
+            }
+
             const lessonDataToSend = {
-                course_id: selectedCourse,
+                course_id: courseIdNumber,
                 title: lesson.title,
                 content_html: lesson.content_html,
                 code_blocks: codeBlocks,
@@ -249,7 +301,7 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                                 <option value="">Select a course</option>
                                 {courses.map(course => (
                                     <option key={course.course_id} value={course.course_id}>
-                                        {course.title} ({course.language})
+                                        {course.title}
                                     </option>
                                 ))}
                             </select>
@@ -426,35 +478,36 @@ const LessonCreator = ({ mode = 'create', lessonData = null, onSave, onCancel })
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <input
-                                    type="text"
-                                    value={attachment.file_name}
-                                    onChange={(e) => updateAttachment(attachment.id, 'file_name', e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="File name"
-                                />
-                                <input
-                                    type="url"
-                                    value={attachment.file_url}
-                                    onChange={(e) => updateAttachment(attachment.id, 'file_url', e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="File URL"
-                                />
-                                <select
-                                    value={attachment.file_type}
-                                    onChange={(e) => updateAttachment(attachment.id, 'file_type', e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="pdf">PDF</option>
-                                    <option value="doc">DOC</option>
-                                    <option value="docx">DOCX</option>
-                                    <option value="ppt">PPT</option>
-                                    <option value="pptx">PPTX</option>
-                                    <option value="zip">ZIP</option>
-                                    <option value="txt">TXT</option>
-                                    <option value="image">Image</option>
-                                </select>
+                            <div className="grid grid-cols-1 gap-3">
+                                {attachment.file_url && attachment.file_url !== 'Đang upload...' ? (
+                                    <div className="flex items-center justify-between p-2 bg-gray-100 rounded">
+                                        <span className="text-sm text-gray-700 truncate">{attachment.file_name}</span>
+                                        <button
+                                            onClick={() => window.open(`http://localhost:5000${attachment.file_url}`, '_blank')}
+                                            className="text-blue-500 hover:underline ml-4"
+                                        >
+                                            Download
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center">
+                                        <input
+                                            type="file"
+                                            accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.txt,.jpg,.jpeg,.png,.gif"
+                                            onChange={e => {
+                                                const file = e.target.files[0];
+                                                if (file) handleFileChange(attachment.id, file);
+                                            }}
+                                            className="w-full text-sm text-gray-500
+                                                file:mr-4 file:py-2 file:px-4
+                                                file:rounded-full file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-blue-50 file:text-blue-700
+                                                hover:file:bg-blue-100"
+                                        />
+                                        {attachment.file_url === 'Đang upload...' && <span className="text-sm ml-2">Đang tải lên...</span>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

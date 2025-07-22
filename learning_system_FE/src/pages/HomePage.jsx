@@ -5,7 +5,6 @@ import HomeContent from '../components/Student/HomeContent';
 import CoursesContent from '../components/Student/CoursesContent';
 import AssignmentContent from '../components/Student/AssignmentContent';
 import { menuItems } from '../data/student/home';
-import { Bell } from 'lucide-react';
 import UserProfileContent from '../components/Student/UserProfileContent';
 import { getName } from "../../services/AuthService"
 
@@ -73,12 +72,7 @@ const HomePage = () => {
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
                     inFor={inFor}
                     role={role}
-                    rightContent={
-                        <button className="p-2 rounded-lg hover:bg-gray-100 relative">
-                            <Bell className="h-5 w-5 text-gray-600" />
-                            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                        </button>
-                    }
+                    
                 />
                 <div className="p-4 width-max">
                     {renderContent()}

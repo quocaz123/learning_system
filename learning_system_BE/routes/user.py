@@ -107,13 +107,14 @@ def login():
     response = make_response(jsonify({
         "access_token": access_token,
     }))
-    response.set_cookie("refresh_token", refresh_token, httponly=True, samesite='Strict', secure=True, max_age=7*24*3600)
+    response.set_cookie("refresh_token", refresh_token,  httponly=True, samesite='Lax', max_age=7*24*3600, path='/')
     return response, 200
 
 
 @bp.route('/refresh', methods=['POST'])
 def refresh():
     token = request.cookies.get("refresh_token")
+    print("refresh_token from cookie:", token);
     if not token:
         return jsonify({"error": "Refresh token missing"}), 401
 
@@ -133,7 +134,7 @@ def refresh():
     response = make_response(jsonify({
         "access_token": new_access_token,
     }))
-    response.set_cookie("refresh_token", new_refresh_token, httponly=True, samesite='Strict', secure=True, max_age=7*24*3600)
+    response.set_cookie("refresh_token", new_refresh_token, httponly=True, samesite='Lax', secure=False, max_age=7*24*3600, path='/')
     return response
 
 

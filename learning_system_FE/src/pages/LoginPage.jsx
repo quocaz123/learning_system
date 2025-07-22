@@ -20,6 +20,7 @@ const LoginPage = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        
 
         if (!validateForm()) return;
 

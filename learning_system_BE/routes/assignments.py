@@ -7,22 +7,13 @@ from services.assignment_service import (
     get_assignments as get_assignments_service,
     delete_assigment as delete_assignment_service,
 )
-from models import UserCourse, Lesson, Assignment, AssignmentQuizQuestion, Submission
+from services.notification_service import create_notifications_for_course
+from models import UserCourse, Lesson, Assignment, AssignmentQuizQuestion, Submission, Course
 from models.log import Log
 from database import db
 from datetime import datetime
 from models import AssignmentCodeTest, Grade
-import os
-from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'txt', 'docx', 'pdf'}
-
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 assignment_bp = Blueprint('assignment', __name__)
 
@@ -32,7 +23,8 @@ def get_assignments():
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 10))
     try:
-        result = get_assignments_service(page, per_page)
+        current_user_id = get_jwt_identity()
+        result = get_assignments_service(page, per_page, teacher_id=current_user_id)
         return jsonify(result), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -44,6 +36,16 @@ def create_assignment():
     try:
         data = request.get_json()
         assignment = create_assignment_service(data)
+
+        # Find the course the assignment belongs to
+        lesson = Lesson.query.get(assignment.lesson_id)
+        if lesson:
+            course = Course.query.get(lesson.course_id)
+            if course:
+                # Create notifications for all students in the course
+                message = f"Có bài tập mới '{assignment.title}' trong khóa học '{course.title}'."
+                create_notifications_for_course(course.course_id, message)
+
         return jsonify({"message": "Assignment created successfully", "assignment_id": assignment.assignment_id , "status" : 201}), 201
     except Exception as e:
         db.session.rollback()
@@ -263,17 +265,3 @@ def test_run_assignment(assignment_id):
         })
     return jsonify(results), 200
 
-@assignment_bp.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(save_path)
-        file_url = f'/uploads/{filename}'
-        return jsonify({'file_url': file_url}), 200
-    return jsonify({'error': 'File type not allowed'}), 400
