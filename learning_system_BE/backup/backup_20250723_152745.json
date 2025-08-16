@@ -1,0 +1,246 @@
+{
+  "users": [
+    {
+      "user_id": 1,
+      "email": "assistant1@dtu.edu.vn",
+      "password_hash": "pbkdf2:sha256:600000$hCjBumzRKeEotM0v$ab22717e4d2d572974270b08a25d2dfca49a7a07f015fb339d441abed2ec7330",
+      "role": "assistant",
+      "is_active": true,
+      "is_2fa_enabled": false,
+      "otp_secret": "5ZEFLPA2DTA6MAZ35NZ7B6ISC3W4USBG",
+      "created_at": "2025-07-14T09:39:37.824646"
+    },
+    {
+      "user_id": 3,
+      "email": "quocthangbinh234@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$QKHUKttUhW1lVsLY$b4599fc5683d930360489d6223f2511b698277b3ddb750989f8a79e6b2261e5a",
+      "role": "teacher",
+      "is_active": true,
+      "is_2fa_enabled": false,
+      "otp_secret": "TAUADG55F4QH6QIQX4UDX4GXWHURWTGB",
+      "created_at": "2025-07-21T09:38:29.519025"
+    },
+    {
+      "user_id": 2,
+      "email": "quocphan234@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$QqnzrcFSmsZ1ER5y$33f6319ae1919bee27b6dd48d0012deb6d49cd9886ed7d3dea61e39796814467",
+      "role": "student",
+      "is_active": true,
+      "is_2fa_enabled": false,
+      "otp_secret": "OM4G6RW4X3BD7K5WRB4YCU3G4ZQ4Z6ZA",
+      "created_at": "2025-07-14T09:47:12.531256"
+    }
+  ],
+  "courses": [
+    {
+      "course_id": 2,
+      "title": "Python nâng cao",
+      "description": "Khóa học nâng cao về Python, phù hợp với người đã có nền tảng",
+      "language": "Python",
+      "created_by": 1,
+      "created_at": "2025-06-30T15:28:06.101175"
+    },
+    {
+      "course_id": 3,
+      "title": "Python Cơ Bản Cho Người Mới Bắt Đầu",
+      "description": "Học các kiến thức nền tảng về Python: cú pháp, biến, kiểu dữ liệu, điều kiện, vòng lặp và file.",
+      "language": "vi",
+      "created_by": 1,
+      "created_at": "2025-07-08T16:34:12.107485"
+    },
+    {
+      "course_id": 5,
+      "title": "Test1",
+      "description": "test",
+      "language": "javascript",
+      "created_by": 1,
+      "created_at": "2025-07-12T10:05:53.401413"
+    },
+    {
+      "course_id": 6,
+      "title": "Python for Beginners",
+      "description": "An introductory course to Python programming.",
+      "language": "English",
+      "created_by": 1,
+      "created_at": "2025-07-12T10:08:40.116146"
+    },
+    {
+      "course_id": 7,
+      "title": "Test",
+      "description": "ê",
+      "language": "python",
+      "created_by": 1,
+      "created_at": "2025-07-12T10:10:05.624220"
+    },
+    {
+      "course_id": 1,
+      "title": "Perl cơ bản",
+      "description": "Khóa học dành cho người mới bắt đầu học Perl",
+      "language": "Python",
+      "created_by": 2,
+      "created_at": "2025-06-30T15:28:06.101175"
+    },
+    {
+      "course_id": 9,
+      "title": "Python Tutorial",
+      "description": "Python is a popular programming language.\nPython can be used on a server to create web applications.",
+      "language": "python",
+      "created_by": 3,
+      "created_at": "2025-07-21T09:45:00.584655"
+    },
+    {
+      "course_id": 10,
+      "title": "JavaScript cơ bản",
+      "description": "Cải thiện javascript",
+      "language": "javascript",
+      "created_by": 3,
+      "created_at": "2025-07-22T09:37:41.054877"
+    }
+  ],
+  "assignments": [
+    {
+      "assignment_id": 11,
+      "lesson_id": 1,
+      "type": "code",
+      "title": "Test",
+      "description": "viết hàm sum python",
+      "due_date": "2025-07-27",
+      "created_at": "2025-07-04T08:48:36.333016"
+    },
+    {
+      "assignment_id": 6001,
+      "lesson_id": 2001,
+      "type": "quiz",
+      "title": "Quiz: Python là gì?",
+      "description": "Kiểm tra kiến thức nền tảng về Python",
+      "due_date": "2025-08-01",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6002,
+      "lesson_id": 2001,
+      "type": "upload",
+      "title": "Upload: Viết cảm nhận",
+      "description": "Viết một đoạn văn mô tả tại sao bạn chọn học Python và upload file .txt",
+      "due_date": "2025-08-02",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6003,
+      "lesson_id": 2002,
+      "type": "code",
+      "title": "Viết chương trình sử dụng biến",
+      "description": "Tạo và in ra thông tin một người",
+      "due_date": "2025-08-03",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6004,
+      "lesson_id": 2002,
+      "type": "quiz",
+      "title": "Quiz: Kiểu dữ liệu",
+      "description": "Chọn đúng kiểu dữ liệu trong Python",
+      "due_date": "2025-08-04",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6005,
+      "lesson_id": 2003,
+      "type": "code",
+      "title": "Viết hàm xếp loại học lực",
+      "description": "Nhập điểm và in ra học lực tương ứng",
+      "due_date": "2025-08-05",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6006,
+      "lesson_id": 2004,
+      "type": "code",
+      "title": "Lặp số",
+      "description": "In các số chẵn từ 0 đến n",
+      "due_date": "2025-08-06",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6007,
+      "lesson_id": 2004,
+      "type": "upload",
+      "title": "Upload: Vòng lặp",
+      "description": "Viết một đoạn code về for/while, chụp ảnh màn hình và upload file PDF",
+      "due_date": "2025-08-07",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 6008,
+      "lesson_id": 2005,
+      "type": "code",
+      "title": "File I/O cơ bản",
+      "description": "Ghi và đọc nội dung từ file",
+      "due_date": "2025-08-08",
+      "created_at": "2025-07-08T22:21:33.589346"
+    },
+    {
+      "assignment_id": 12,
+      "lesson_id": 2,
+      "type": "code",
+      "title": "Test",
+      "description": "None",
+      "due_date": "2025-07-24",
+      "created_at": "2025-07-11T09:29:10.694858"
+    },
+    {
+      "assignment_id": 13,
+      "lesson_id": 2010,
+      "type": "quiz",
+      "title": "None",
+      "description": "None",
+      "due_date": "2025-07-18",
+      "created_at": "2025-07-17T16:14:21.483273"
+    },
+    {
+      "assignment_id": 14,
+      "lesson_id": 2002,
+      "type": "code",
+      "title": "Không",
+      "description": "tets",
+      "due_date": "2025-07-26",
+      "created_at": "2025-07-17T16:21:56.948300"
+    },
+    {
+      "assignment_id": 15,
+      "lesson_id": 2,
+      "type": "quiz",
+      "title": "Quiz",
+      "description": "Trắc nghiệm",
+      "due_date": "2025-07-23",
+      "created_at": "2025-07-21T09:00:33.224473"
+    },
+    {
+      "assignment_id": 16,
+      "lesson_id": 2,
+      "type": "code",
+      "title": "Test_1",
+      "description": "Tính sum",
+      "due_date": "2025-07-23",
+      "created_at": "2025-07-21T09:13:50.022955"
+    },
+    {
+      "assignment_id": 17,
+      "lesson_id": 2004,
+      "type": "quiz",
+      "title": "Test",
+      "description": "Quiz",
+      "due_date": "2025-07-30",
+      "created_at": "2025-07-21T09:22:43.115842"
+    },
+    {
+      "assignment_id": 18,
+      "lesson_id": 2020,
+      "type": "quiz",
+      "title": "Test",
+      "description": "Quiz",
+      "due_date": "2025-07-26",
+      "created_at": "2025-07-22T09:53:54.024167"
+    }
+  ]
+}

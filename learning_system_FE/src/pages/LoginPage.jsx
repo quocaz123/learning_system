@@ -20,13 +20,14 @@ const LoginPage = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        
+
 
         if (!validateForm()) return;
 
         setIsLoading(true);
         try {
             const res = await loginAPI(formData.email, formData.password);
+            console.log(res);
             if (res && res.access_token) {
                 localStorage.setItem('access_token', res.access_token);
                 const userInfo = getName(); // userInfo là object chứa role
@@ -54,7 +55,7 @@ const LoginPage = () => {
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không đúng.';
-            toast.error(`Đăng nhập thất bại...`);
+            toast.error('Tên đăng nhập hoặc mật khẩu không đúng.', { autoClose: 7000 });
         } finally {
             setIsLoading(false);
         }

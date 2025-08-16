@@ -193,7 +193,7 @@ def logout():
     jti = request.user.get("jti")
     exp = request.user.get("exp")
 
-    ttl = exp - int(datetime.datetime.utcnow().timestamp())
+    ttl = exp - int(datetime.utcnow().timestamp())
     redis_client.setex(f"blacklist:{jti}", ttl, "true")
 
     response = jsonify({"message": "Đăng xuất thành công (token đã bị vô hiệu hóa)"})
@@ -333,16 +333,19 @@ def get_student_logs():
                 student_ids.add(user.user_id)
     # Lấy log của các sinh viên này
     logs = Log.query.filter(Log.user_id.in_(student_ids)).order_by(Log.created_at.desc()).limit(30).all()
-    result = [
-        {
+    result = []
+    for log in logs:
+        user = User.query.get(log.user_id)
+        profile = user.profile if user else None
+        full_name = profile.full_name if profile else (user.email if user else "")
+        result.append({
             'log_id': log.log_id,
             'user_id': log.user_id,
+            'full_name': full_name,
             'action_type': log.action_type,
             'action_data': log.action_data,
             'created_at': log.created_at.isoformat()
-        }
-        for log in logs
-    ]
+        })
     return jsonify({"data": result, "status": 200}), 200
 
 @bp.route('/teacher/recent-submissions', methods=["GET"])

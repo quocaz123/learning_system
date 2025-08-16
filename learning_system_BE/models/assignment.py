@@ -17,6 +17,16 @@ class Assignment(db.Model):
     quiz_questions = db.relationship('AssignmentQuizQuestion', backref='assignment', cascade="all, delete-orphan")
     submissions = db.relationship('Submission', backref='assignment', cascade="all, delete-orphan")
 
+    def to_dict(self):
+        result = {}
+        for c in self.__table__.columns:
+            value = getattr(self, c.name)
+            if hasattr(value, "isoformat"):
+                result[c.name] = value.isoformat()
+            else:
+                result[c.name] = value
+        return result
+
 
 class AssignmentCodeTest(db.Model):
     __tablename__ = 'assignment_code_tests'

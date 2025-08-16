@@ -5,7 +5,7 @@ import re
 
 lmstudio_bp = Blueprint('lmstudio', __name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Hoặc lấy từ biến môi trường
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
 
 @lmstudio_bp.route('/lmstudio/completion', methods=['POST'])
 def code_completion():

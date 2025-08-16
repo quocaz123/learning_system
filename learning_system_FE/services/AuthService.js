@@ -65,9 +65,10 @@ export const toggle2FAAPI = async (enable) => {
         }
     );
     if (response && response.access_token) {
-        localStorage.setItem('access_token', response.access_token);}
+        localStorage.setItem('access_token', response.access_token);
+    }
     console.log('toggle2FAAPI raw response:', response.access_token);
-    
+
     return response;
 };
 

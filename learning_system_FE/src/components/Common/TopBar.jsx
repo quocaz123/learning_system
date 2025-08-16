@@ -1,6 +1,5 @@
 
 import { Menu } from 'lucide-react';
-import NotificationBell from './NotificationBell'; // Import the new component
 
 const TopBar = ({ title, onMenuClick, rightContent, inFor, role }) => {
     // Cho phép truyền userInfo từ props, nếu không có thì mặc định là Giảng viên
@@ -15,7 +14,6 @@ const TopBar = ({ title, onMenuClick, rightContent, inFor, role }) => {
             </div>
             <div className="flex items-center space-x-4">
                 {rightContent}
-                <NotificationBell />
                 {inFor && (
                     <>
                         <div className="text-right">

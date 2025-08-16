@@ -18,6 +18,16 @@ class User(db.Model):
 
     profile = db.relationship("Profile", backref="user", uselist=False)
 
+    def to_dict(self):
+        result = {}
+        for c in self.__table__.columns:
+            value = getattr(self, c.name)
+            if hasattr(value, "isoformat"):
+                result[c.name] = value.isoformat()
+            else:
+                result[c.name] = value
+        return result
+
 class Profile(db.Model):
     __tablename__ = 'profiles'
 

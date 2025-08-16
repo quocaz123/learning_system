@@ -7,6 +7,8 @@ import AssignmentContent from '../components/Student/AssignmentContent';
 import { menuItems } from '../data/student/home';
 import UserProfileContent from '../components/Student/UserProfileContent';
 import { getName } from "../../services/AuthService"
+import NotificationBell from '../components/Common/NotificationBell';
+import ChatBotGemini from '../components/Student/ChatBotGemini';
 
 const HomePage = () => {
     const [activeMenu, setActiveMenu] = useState('home');
@@ -44,6 +46,8 @@ const HomePage = () => {
                 return <CoursesContent selectedCourse={selectedCourse} />
             case 'assignments':
                 return <AssignmentContent />;
+            case 'chat':
+                return <ChatBotGemini />;
             case 'profile':
                 return <UserProfileContent />
             default:
@@ -72,7 +76,11 @@ const HomePage = () => {
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
                     inFor={inFor}
                     role={role}
-                    
+                    rightContent={
+                        
+                         <NotificationBell /> 
+                            
+                    }
                 />
                 <div className="p-4 width-max">
                     {renderContent()}

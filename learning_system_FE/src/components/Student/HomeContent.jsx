@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpenCheck, CheckCircle, Clock, BookOpen, User } from 'lucide-react';
-import { getAllCoursesAPI, enrollCourseAPI, getListCoursesAPI } from '../../../services/CourseService';
+import {  enrollCourseAPI, getListCoursesAPI } from '../../../services/CourseService';
 import AssignmentService from '../../../services/AssignmentService';
 import { toast } from 'react-toastify';
 

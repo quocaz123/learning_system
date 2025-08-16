@@ -13,6 +13,16 @@ class Course(db.Model):
 
     lessons = db.relationship('Lesson', backref='course', cascade="all, delete-orphan")
 
+    def to_dict(self):
+        result = {}
+        for c in self.__table__.columns:
+            value = getattr(self, c.name)
+            if hasattr(value, "isoformat"):
+                result[c.name] = value.isoformat()
+            else:
+                result[c.name] = value
+        return result
+
 class Lesson(db.Model):
     __tablename__ = 'lessons'
 

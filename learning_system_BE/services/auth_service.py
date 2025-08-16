@@ -17,7 +17,7 @@ def generate_token(user):
         "name" : user.profile.full_name if hasattr(user, 'profile') and user.profile else "",
         "role" : user.role,
         "iat" : now,
-        "exp" : now + datetime.timedelta(minutes=15),
+        "exp" : now + datetime.timedelta(minutes=40),
         "csrf" : str(uuid.uuid4()),
         "2fa" : user.is_2fa_enabled,
         "type" : "access",
@@ -28,7 +28,7 @@ def generate_token(user):
         "sub" : str(user.user_id),
         "type" : "refresh",
         "iat" : now,
-        "exp" : now + datetime.timedelta(minutes=30),
+        "exp" : now + datetime.timedelta(minutes=55),
         "jti" : str(uuid.uuid4()) # để quản lý / block nếu cần
     }
  

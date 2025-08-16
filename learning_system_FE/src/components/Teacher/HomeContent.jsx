@@ -152,7 +152,7 @@ const HomeContent = () => {
                             studentLogs.map(log => (
                                 <div key={log.log_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
-                                        <p className="font-medium">User ID: {log.user_id}</p>
+                                        <p className="font-medium">{log.full_name}</p>
                                         <p className="text-sm text-gray-600">{log.action_type}</p>
                                         <p className="text-xs text-gray-500">{log.action_data && JSON.stringify(log.action_data)}</p>
                                     </div>

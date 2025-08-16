@@ -50,6 +50,12 @@ def create_app():
     from routes.report_statistics import report_statistics_bp
     app.register_blueprint(report_statistics_bp)
     app.register_blueprint(fileupload_bp)  # Đăng ký blueprint phục vụ file upload
+
+    from routes.chat import chat_bp
+    app.register_blueprint(chat_bp)
+
+    from routes.backup import backup_bp
+    app.register_blueprint(backup_bp)
     return app
 
 if __name__ == "__main__":

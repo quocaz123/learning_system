@@ -50,9 +50,11 @@ export const getLessonsByCourseAPI = (courseId) =>
     });
 
 export const getStudentsByCourseAPI = (courseId) =>
-    axios.get(`/courses/${courseId}/students`, {
+    axios.get(`/courses/${courseId}/students-assignments`, {
         headers: authHeader(),
     });
+
+
 
 export const deleteCourseAPI = (courseId) =>
     axios.delete(`/courses/${courseId}`, { headers: authHeader() });

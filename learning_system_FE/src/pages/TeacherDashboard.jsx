@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     PlusCircle,
     Edit3,
@@ -23,22 +23,167 @@ import { getName } from "../../services/AuthService";
 import UserProfileSystem from '../components/Student/UserProfileContent';
 import LessonEdit from '../components/Teacher/LessonEdit';
 import { getLessonByIdAPI } from '../../services/LessonService';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import axios from 'axios';
 
-// --- Di chuyển CoursesTab ra ngoài và bọc trong memo ---
-const CoursesTab = memo(({
-    showCoursesOpen, showLessonCreator, showLessons, showLessonDetail, showLessonEdit,
-    courses, lessons, editingLesson, selectedCourseId, selectedLessonId, searchTerm,
-    setShowCoursesOpen, setShowLessonCreator, setLessons, setEditingLesson, setShowLessonEdit, setSearchTerm,
-    handleViewLessons, handleDeleteCourse, handleCloseLessons, handleCreateLesson, handleEditLesson, handleViewLesson, handleCloseLessonDetail
-}) => {
-    const selectedCourseName = useMemo(() => {
-        if (!selectedCourseId) return '';
-        const course = courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId);
-        return course?.name || course?.title || '';
-    }, [courses, selectedCourseId]);
 
-    return (
+const TeacherDashboard = () => {
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [showCoursesOpen, setShowCoursesOpen] = useState(false);
+    const [showLessonCreator, setShowLessonCreator] = useState(false);
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
+    const [lessons, setLessons] = useState([]);
+    const [showLessons, setShowLessons] = useState(false);
+    const [selectedStudentCourseId, setSelectedStudentCourseId] = useState(null);
+    const [studentsByCourse, setStudentsByCourse] = useState([]);
+    const [selectedLessonId, setSelectedLessonId] = useState(null);
+    const [showLessonDetail, setShowLessonDetail] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [showLessonEdit, setShowLessonEdit] = useState(false);
+    const [editingLesson, setEditingLesson] = useState(null);
+    const [studentAssignmentData, setStudentAssignmentData] = useState({ students: [], assignments: [] });
+
+    const [inFor, setInFor] = useState('');
+    const [role, setRole] = useState('');
+
+    const handleExportExcel = () => {
+        if (!selectedStudentCourseId) {
+            alert("Vui lòng chọn một khóa học!");
+            return;
+        }
+        if (!studentAssignmentData.students.length) {
+            alert("Không có sinh viên trong khóa học này!");
+            return;
+        }
+        const course = courses.find(
+            c => (c.course_id || c.id) === selectedStudentCourseId
+        );
+        const courseName = course?.name || course?.title || "Khoa_hoc";
+        exportToExcel(studentAssignmentData.students, studentAssignmentData.assignments, courseName);
+    };
+    
+    const exportToExcel = (students, assignments, courseName) => {
+        // Tạo header
+        const headers = ["Họ tên", "Email", ...assignments.map(a => a.title)];
+        // Tạo dữ liệu
+        const data = students.map(student => {
+            const row = [
+                student.full_name,
+                student.email,
+                ...assignments.map(a => {
+                    const found = (student.assignments || []).find(sa => sa.assignment_id === a.assignment_id);
+                    return found && found.score !== null && found.score !== undefined ? found.score : "-";
+                })
+            ];
+            return row;
+        });
+        // Gộp header + data
+        const wsData = [headers, ...data];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Students");
+        const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const fileName = `Bao_cao_diem_${courseName}.xlsx`;
+        saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
+    };
+
+    useEffect(() => {
+        const userInfo = getName();
+        if (userInfo) {
+            setInFor(userInfo.fullName || '');
+            setRole(userInfo.role || 'Student');
+        }
+        const fetchCourses = async () => {
+            try {
+                const res = await getAllCoursesAPI();
+                console.log(res);
+                setCourses(res.data || []);
+            } catch {
+                setCourses([]);
+            }
+        };
+        fetchCourses();
+    }, []);
+
+
+    const handleViewLessons = async (courseId) => {
+        setSelectedCourseId(courseId);
+        try {
+            const res = await getLessonsByCourseAPI(courseId);
+            // Kiểm tra dữ liệu trả về
+            const lessonsArr = res?.result || [];
+            setLessons(Array.isArray(lessonsArr) ? lessonsArr : []);
+            setShowLessons(true);
+        } catch {
+            setLessons([]);
+            setShowLessons(true);
+        }
+    };
+
+    const handleCloseLessons = () => {
+        setShowLessons(false);
+        setLessons([]);
+        setSelectedCourseId(null);
+    };
+
+    const handleViewStudents = async (courseId) => {
+        setSelectedStudentCourseId(courseId);
+        try {
+            // Gọi API mới lấy cả danh sách sinh viên, bài tập, điểm số
+            const res = await getStudentsByCourseAPI(courseId);
+            console.log(res);
+            setStudentAssignmentData(res || { students: [], assignments: [] });
+            setStudentsByCourse(res.students || []); // Để không ảnh hưởng export Excel cũ
+        } catch {
+            setStudentAssignmentData({ students: [], assignments: [] });
+            setStudentsByCourse([]);
+        }
+    };
+
+    const handleViewLesson = (lessonId) => {
+        setSelectedLessonId(lessonId);
+        setShowLessonDetail(true);
+    };
+    const handleCloseLessonDetail = () => {
+        setShowLessonDetail(false);
+        setSelectedLessonId(null);
+    };
+
+    const handleEditLesson = async (lessonId) => {
+        // Tìm lesson trong danh sách lessons để lấy course_id
+        const lessonInList = lessons.find(l => l.lesson_id === lessonId);
+        try {
+            const res = await getLessonByIdAPI(lessonId);
+            let lessonDetail = res.data;
+
+            // Nếu lessonDetail không có course_id, gán lại từ lessonInList
+            if (!lessonDetail.course_id && lessonInList?.course_id) {
+                lessonDetail = { ...lessonDetail, course_id: lessonInList.course_id };
+            }
+            setEditingLesson(lessonDetail);
+            setShowLessonEdit(true);
+        } catch {
+            alert('Không lấy được dữ liệu bài học!');
+        }
+    };
+
+    const handleDeleteCourse = async (course_id) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa khóa học này không?")) {
+            try {
+                await deleteCourseAPI(course_id);
+                alert("Đã xóa khóa học thành công!");
+                setCourses(prev => prev.filter(c => (c.course_id || c.id) !== course_id));
+            } catch {
+                alert("Xóa khóa học thất bại!");
+            }
+        }
+    };
+
+    const CoursesTab = () => (
         <div className="space-y-6">
+            {/* Ẩn bảng khóa học khi showLessons */}
             {(!showCoursesOpen && !showLessonCreator && !showLessons) ? (
                 <>
                     <div className="flex items-center justify-between">
@@ -53,7 +198,7 @@ const CoursesTab = memo(({
                             </button>
                             <button
                                 className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-700 transition-colors"
-                                onClick={handleCreateLesson}
+                                onClick={() => setShowLessonCreator(true)}
                             >
                                 <PlusCircle size={20} className="mr-2" />
                                 Tạo bài học
@@ -107,16 +252,21 @@ const CoursesTab = memo(({
             ) : showLessonCreator ? (
                 <LessonCreator onCancel={() => setShowLessonCreator(false)} />
             ) : null}
+            {/* Hiển thị LessonList khi showLessons */}
             {showLessons && !showLessonCreator && !showLessonDetail && !showLessonEdit && (
                 <LessonList
                     lessons={lessons}
                     setLessons={setLessons}
-                    selectedCourseName={selectedCourseName}
+                    selectedCourseName={selectedCourseId ? (courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.name || courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId)?.title || '') : ''}
                     onBack={handleCloseLessons}
-                    onCreateLesson={handleCreateLesson}
+                    onCreateLesson={() => setShowLessonCreator(true)}
                     onEditLesson={handleEditLesson}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
+                    searchTerm={''}
+                    setSearchTerm={() => { }}
+                    filterStatus={''}
+                    setFilterStatus={() => { }}
+                    getStatusColor={(status) => status === 'active' ? 'bg-green-500' : 'bg-gray-500'}
+                    getStatusText={(status) => status === 'active' ? 'Hoạt động' : 'Bản nháp'}
                     onViewLesson={handleViewLesson}
                 />
             )}
@@ -140,127 +290,6 @@ const CoursesTab = memo(({
             )}
         </div>
     );
-});
-
-const TeacherDashboard = () => {
-    const [activeTab, setActiveTab] = useState('dashboard');
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [showCoursesOpen, setShowCoursesOpen] = useState(false);
-    const [showLessonCreator, setShowLessonCreator] = useState(false);
-    const [selectedCourseId, setSelectedCourseId] = useState(null);
-    const [lessons, setLessons] = useState([]);
-    const [showLessons, setShowLessons] = useState(false);
-    const [selectedStudentCourseId, setSelectedStudentCourseId] = useState(null);
-    const [studentsByCourse, setStudentsByCourse] = useState([]);
-    const [selectedLessonId, setSelectedLessonId] = useState(null);
-    const [showLessonDetail, setShowLessonDetail] = useState(false);
-    const [courses, setCourses] = useState([]);
-    const [showLessonEdit, setShowLessonEdit] = useState(false);
-    const [editingLesson, setEditingLesson] = useState(null);
-    const [searchTerm, setSearchTerm] = useState(''); // Thêm state cho tìm kiếm
-
-    const [inFor, setInFor] = useState('');
-    const [role, setRole] = useState('');
-
-    useEffect(() => {
-        const userInfo = getName();
-        if (userInfo) {
-            setInFor(userInfo.fullName || '');
-            setRole(userInfo.role || 'Student');
-        }
-        const fetchCourses = async () => {
-            try {
-                const res = await getAllCoursesAPI();
-
-                setCourses(res.data || []);
-            } catch {
-                setCourses([]);
-            }
-        };
-        fetchCourses();
-    }, []);
-
-    const handleViewLessons = useCallback(async (courseId) => {
-        setSelectedCourseId(courseId);
-        try {
-            const res = await getLessonsByCourseAPI(courseId);
-            // Kiểm tra dữ liệu trả về
-            const lessonsArr = res?.result || [];
-            setLessons(Array.isArray(lessonsArr) ? lessonsArr : []);
-            setShowLessons(true);
-        } catch {
-            setLessons([]);
-            setShowLessons(true);
-        }
-    }, []); // Empty dependency array as it doesn't depend on component state/props
-
-    const handleCloseLessons = useCallback(() => {
-        setShowLessons(false);
-        setLessons([]);
-        setSelectedCourseId(null);
-    }, []);
-
-    const handleViewStudents = useCallback(async (courseId) => {
-        setSelectedStudentCourseId(courseId);
-        try {
-            const res = await getStudentsByCourseAPI(courseId);
-
-            setStudentsByCourse(res.data.students || []);
-        } catch {
-            setStudentsByCourse([]);
-        }
-    }, []);
-
-    const handleViewLesson = useCallback((lessonId) => {
-        setSelectedLessonId(lessonId);
-        setShowLessonDetail(true);
-    }, []);
-    const handleCloseLessonDetail = useCallback(() => {
-        setShowLessonDetail(false);
-        setSelectedLessonId(null);
-    }, []);
-
-    const handleEditLesson = useCallback(async (lessonId) => {
-        // Tìm lesson trong danh sách lessons để lấy course_id
-        const lessonInList = lessons.find(l => l.lesson_id === lessonId);
-        try {
-            const res = await getLessonByIdAPI(lessonId);
-            let lessonDetail = res.data;
-
-            // Nếu lessonDetail không có course_id, gán lại từ lessonInList
-            if (!lessonDetail.course_id && lessonInList?.course_id) {
-                lessonDetail = { ...lessonDetail, course_id: lessonInList.course_id };
-            }
-            setEditingLesson(lessonDetail);
-            setShowLessonEdit(true);
-        } catch {
-            alert('Không lấy được dữ liệu bài học!');
-        }
-    }, [lessons]); // Depends on 'lessons' state
-
-    const handleDeleteCourse = useCallback(async (course_id) => {
-        if (window.confirm("Bạn có chắc chắn muốn xóa khóa học này không?")) {
-            try {
-                await deleteCourseAPI(course_id);
-                alert("Đã xóa khóa học thành công!");
-                setCourses(prev => prev.filter(c => (c.course_id || c.id) !== course_id));
-            } catch {
-                alert("Xóa khóa học thất bại!");
-            }
-        }
-    }, []);
-
-    const handleCreateLesson = useCallback(() => {
-        setShowLessonCreator(true);
-    }, []);
-
-    const selectedCourseName = useMemo(() => {
-        if (!selectedCourseId) return '';
-        const course = courses.find(c => c.course_id === selectedCourseId || c.id === selectedCourseId);
-        return course?.name || course?.title || '';
-    }, [courses, selectedCourseId]);
-
-    // Xóa định nghĩa CoursesTab ở đây
 
     const AssignmentsTab = () => {
         const [showCreate, setShowCreate] = useState(false);
@@ -299,7 +328,7 @@ const TeacherDashboard = () => {
                             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition-colors">
+                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-blue-700 transition-colors" onClick={handleExportExcel}>
                         <Download size={20} className="mr-2" />
                         Xuất báo cáo
                     </button>
@@ -323,13 +352,21 @@ const TeacherDashboard = () => {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sinh viên</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                {/* Render cột bài tập */}
+                                {(studentAssignmentData.assignments || []).map(a => (
+                                    <th key={a.assignment_id} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">{a.title}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {studentsByCourse.map(student => (
+                            {studentAssignmentData.students.map(student => (
                                 <tr key={student.user_id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap">{student.full_name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">{student.email}</td>
+                                    {/* Render điểm từng bài tập */}
+                                    {student.assignments.map(a => (
+                                        <td key={a.assignment_id} className="px-6 py-4 whitespace-nowrap text-center">{a.score !== null && a.score !== undefined ? a.score : '-'}</td>
+                                    ))}
                                 </tr>
                             ))}
                         </tbody>
@@ -344,33 +381,7 @@ const TeacherDashboard = () => {
             case 'dashboard':
                 return <HomeContent />;
             case 'courses':
-                return <CoursesTab
-                    showCoursesOpen={showCoursesOpen}
-                    setShowCoursesOpen={setShowCoursesOpen}
-                    showLessonCreator={showLessonCreator}
-                    setShowLessonCreator={setShowLessonCreator}
-                    showLessons={showLessons}
-                    courses={courses}
-                    handleViewLessons={handleViewLessons}
-                    handleDeleteCourse={handleDeleteCourse}
-                    lessons={lessons}
-                    setLessons={setLessons}
-                    selectedCourseName={selectedCourseName}
-                    handleCloseLessons={handleCloseLessons}
-                    handleCreateLesson={handleCreateLesson}
-                    handleEditLesson={handleEditLesson}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    handleViewLesson={handleViewLesson}
-                    showLessonDetail={showLessonDetail}
-                    showLessonEdit={showLessonEdit}
-                    editingLesson={editingLesson}
-                    setShowLessonEdit={setShowLessonEdit}
-                    setEditingLesson={setEditingLesson}
-                    selectedCourseId={selectedCourseId}
-                    selectedLessonId={selectedLessonId}
-                    handleCloseLessonDetail={handleCloseLessonDetail}
-                />;
+                return <CoursesTab />;
             case 'assignments':
                 return <AssignmentsTab />;
             case 'students':
@@ -413,12 +424,6 @@ const TeacherDashboard = () => {
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
                     inFor={inFor}
                     role={role}
-                    rightContent={
-                        <button className="p-2 rounded-full hover:bg-gray-100 relative">
-                            <Bell size={20} />
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
-                        </button>
-                    }
                 />
                 <main className="flex-1 p-6">
                     {renderContent()}

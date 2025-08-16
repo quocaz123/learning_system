@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Users, BookOpen, BarChart3, Settings, Shield, Database, Activity, TrendingUp, Code, FileText, GraduationCap, Bell
+    Users, BookOpen, BarChart3, Settings, TrendingUp,  FileText, GraduationCap, Database
 } from 'lucide-react';
 import Sidebar from '../components/Common/Sidebar';
 import StatCard from '../components/Admin/StatCard';
@@ -11,6 +11,8 @@ import UserManagement from "../components/Admin/UserManagement";
 import ReportStatistics from "../components/Admin/ReportStatistics";
 import { getName } from '../../services/AuthService';
 import UserProfileSystem from '../components/Student/UserProfileContent';
+import CourseManagement from '../components/Admin/CourseManagement';
+import BackupRestoreManager from '../components/Admin/BackupRestoreManager';
 const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'users', label: 'Quản lý người dùng', icon: Users },
@@ -18,7 +20,7 @@ const sidebarItems = [
     { id: 'reports', label: 'Báo cáo & Thống kê', icon: TrendingUp },
     // { id: 'security', label: 'Bảo mật', icon: Shield },
     { id: 'settings', label: 'Cài đặt', icon: Settings },
-    // { id: 'backup', label: 'Sao lưu', icon: Database },
+    { id: 'backup', label: 'Sao lưu', icon: Database }
     // { id: 'logs', label: 'Nhật ký', icon: Activity }
 ];
 
@@ -71,8 +73,12 @@ const AdminDashboard = () => {
                 return renderDashboard();
             case 'users':
                 return <UserManagement />;
+            case 'courses':
+                    return <CourseManagement />;
             case 'reports':
                 return <ReportStatistics />;
+            case 'backup':
+                return <BackupRestoreManager />;
             case 'settings':
                 return <UserProfileSystem />;
             // Các case khác có thể tách thành component riêng nếu cần
@@ -102,12 +108,7 @@ const AdminDashboard = () => {
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
                     inFor={inFor}
                     role={role}
-                    rightContent={
-                        <button className="p-2 rounded-lg hover:bg-gray-100 relative">
-                            <Bell className="h-5 w-5 text-gray-600" />
-                            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                        </button>
-                    }
+                   
                 />
                 <main className="flex-1 p-6">
                     {renderContent()}

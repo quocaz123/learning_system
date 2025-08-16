@@ -26,6 +26,9 @@ const AdminUserService = {
   getRecentActivities: async () => {
     return await axios.get("/dashboard/recent-activities", { headers: authHeader() });
   },
+  getCoursesAdmin: async () => {
+    return await axios.get("/admin/courses", { headers: authHeader() });
+  }
 };
 
 export default AdminUserService; 

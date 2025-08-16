@@ -63,3 +63,33 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return '', 204 
+
+@adminuser_bp.route('/admin/courses', methods=['GET'])
+@token_required('assistant')
+def get_courses_admin():
+    from models.course import Course
+    from models.user import User
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    query = Course.query
+    total = query.count()
+    courses = query.order_by(Course.created_at.desc()).offset((page-1)*per_page).limit(per_page).all()
+    result = []
+    for course in courses:
+        creator = User.query.get(course.created_by)
+        profile = creator.profile if creator else None
+        lessons_count = len(course.lessons) if hasattr(course, 'lessons') else 0
+        result.append({
+            "id": course.course_id,
+            "name": course.title,
+            "creator": profile.full_name if profile else (creator.email if creator else ""),
+            "creator_email": creator.email if creator else "",
+            "created_at": course.created_at.strftime('%Y-%m-%d %H:%M:%S') if course.created_at else "",
+            "lessons_count": lessons_count
+        })
+    return jsonify({
+        "courses": result,
+        "total": total,
+        "page": page,
+        "per_page": per_page
+    }) 

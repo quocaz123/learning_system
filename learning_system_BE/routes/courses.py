@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from utils.middleware import token_required, get_jwt_identity
-from models import User, Course, Lesson , UserCourse, LessonProgress
+from models import User, Course, Lesson , UserCourse, LessonProgress, LessonCodeBlock, Assignment
 from services.course_service import count_completed_lessons, get_all_courses_service, get_lesson_detail_service, create_course_service, create_lesson_service
 from models import assignment
 import logging
@@ -135,8 +135,52 @@ def get_students_in_course(course_id):
                 'user_id': user.user_id,
                 'full_name': profile.full_name if profile else '',
                 'email': user.email,
+                
             })
     return jsonify({'students': result, 'status': 200}), 200
+
+@course_bp.route('/courses/<int:course_id>/students-assignments', methods=['GET'])
+@token_required(['teacher', 'assistant'])
+def get_students_assignments_in_course(course_id):
+    from models import User, Profile, UserCourse, Lesson, Assignment, Submission, Grade
+    # Lấy tất cả lesson thuộc course
+    lessons = Lesson.query.filter_by(course_id=course_id).all()
+    lesson_ids = [l.lesson_id for l in lessons]
+    # Lấy tất cả assignment thuộc các lesson này
+    assignments = Assignment.query.filter(Assignment.lesson_id.in_(lesson_ids)).all()
+    assignment_list = [
+        {"assignment_id": a.assignment_id, "title": a.title} for a in assignments
+    ]
+    assignment_id_set = set(a.assignment_id for a in assignments)
+    # Lấy tất cả sinh viên của khóa học
+    user_courses = UserCourse.query.filter_by(course_id=course_id).all()
+    students = []
+    for uc in user_courses:
+        user = User.query.get(uc.user_id)
+        if user and user.role == 'student':
+            profile = user.profile
+            # Lấy submission cho từng assignment
+            student_assignments = []
+            for a in assignments:
+                submission = Submission.query.filter_by(assignment_id=a.assignment_id, user_id=user.user_id).first()
+                score = None
+                if submission and submission.grade:
+                    score = submission.grade.score
+                student_assignments.append({
+                    "assignment_id": a.assignment_id,
+                    "title": a.title,
+                    "score": score
+                })
+            students.append({
+                "user_id": user.user_id,
+                "full_name": profile.full_name if profile else '',
+                "email": user.email,
+                "assignments": student_assignments
+            })
+    return jsonify({
+        "students": students,
+        "assignments": assignment_list
+    }), 200
 
 @lesson_bp.route('/lessons/<int:lesson_id>', methods=['GET'])
 @token_required()
@@ -169,9 +213,21 @@ def delete_course(course_id):
     course = Course.query.get(course_id)
     if not course:
         return jsonify({"error": "Course not found"}), 404
-    # Xóa các bản ghi liên quan
+
+    # Lấy tất cả lesson thuộc course
+    lessons = Lesson.query.filter_by(course_id=course_id).all()
+    for lesson in lessons:
+        # Xóa codeblocks liên quan
+        LessonCodeBlock.query.filter_by(lesson_id=lesson.lesson_id).delete()
+        # Xóa assignments liên quan (nếu có)
+        Assignment.query.filter_by(lesson_id=lesson.lesson_id).delete()
+        # Xóa các bảng con khác nếu có...
+
+    # Xóa lesson
     Lesson.query.filter_by(course_id=course_id).delete()
+    # Xóa user-course
     UserCourse.query.filter_by(course_id=course_id).delete()
+    # Xóa course
     db.session.delete(course)
     db.session.commit()
     return jsonify({"message": "Course deleted successfully", "course_id": course_id, "status": 200}), 200
